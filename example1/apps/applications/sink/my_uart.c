@@ -8,6 +8,7 @@
 #include <vmal.h>
 #include "sink_debug.h"
 #include "my_uart.h"
+#include "cq_cmd.h"  // 包含AT命令头文件
 
 #ifdef DEBUG_UART
 #define UART_DEBUG(x)               DEBUG(x)
@@ -19,10 +20,59 @@
 
 #define PIO2BANK(pio) ((uint16)((pio) / 32))
 #define PIO2MASK(pio) (1UL << ((pio) % 32))
-
 UARTStreamTaskData theUARTStreamTask;
 
+// 声明静态函数
+static void parse_and_handle_line(const char *line, uint16 len);
 
+// 静态函数定义
+static void parse_and_handle_line(const char *line, uint16 len)
+{
+    recv_t recv;
+    memset(&recv, 0, sizeof(recv));
+
+    // 跳过可能的空白字符
+    const char *p = line;
+    while (len > 0 && (*p == ' ' || *p == '\t')) {
+        p++;
+        len--;
+    }
+    if (len == 0) return;
+
+    // 检查是否以 "AT+" 开头（可选）
+    if (len >= 3 && strncmp(p, "AT+", 3) == 0) {
+        p += 3;
+        len -= 3;
+    }
+
+    // 提取两位命令字母
+    if (len >= 2 && ((p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= '0' && p[0] <= '9')) &&
+                    ((p[1] >= 'A' && p[1] <= 'Z') || (p[1] >= '0' && p[1] <= '9'))) {
+        recv.cmd[0] = p[0];
+        recv.cmd[1] = p[1];
+        recv.cmd[2] = '\0';
+        p += 2;
+        len -= 2;
+    } else {
+        // 格式错误，忽略
+        return;
+    }
+
+    // 跳过可能的 '=' 或空格，剩余部分作为参数
+    while (len > 0 && (*p == '=' || *p == ' ' || *p == '\t')) {
+        p++;
+        len--;
+    }
+    if (len > 0) {
+        // 复制参数（最大不超过 recv.param 大小）
+        uint16 param_len = (len < sizeof(recv.param) - 1) ? len : sizeof(recv.param) - 1;
+        memcpy(recv.param, p, param_len);
+        recv.param[param_len] = '\0';
+    }
+
+    // 调用 cq_cmd 中的处理函数
+    handle_at_command(&recv);
+}
 
 void uart_device_init(void)
 {
@@ -30,6 +80,7 @@ void uart_device_init(void)
     uart_data_stream_init();
     UART_DEBUG(("uart_device_init\n"));
 }
+
 //pio 1~8 15~23
 #define UartTxPio 5
 #define UartRxPio 4
@@ -82,6 +133,7 @@ void uart_data_stream_init(void)
     VmalMessageSinkTask(StreamSinkFromSource(theUARTStreamTask.uart_source),
     &theUARTStreamTask.task);
 }
+
 void uart_data_stream_tx_data(const uint8 *data, uint16 length)
 {
     uint16 offset = 0;
@@ -101,36 +153,43 @@ void uart_data_stream_tx_data(const uint8 *data, uint16 length)
     /* Flush the data out to the uart */
     PanicZero(SinkFlush(theUARTStreamTask.uart_sink, length));
 }
+
 void uart_data_stream_rx_data(Source src)
 {
-    uint16 length = 0;
-    const uint8 *data = NULL;
+    uint16 length;
+    const uint8 *data;
 
-    /* Get the number of bytes in the specified source before the next packet
-    boundary */
-    if(!(length = SourceBoundary(src)))
-    return;
+    while ((length = SourceBoundary(src)) > 0) {
+        data = SourceMap(src);
+        PanicNull((void*)data);
 
-    /* Maps the specified source into the address map */
-    data = SourceMap(src);
-    PanicNull((void*)data);
+        // 将数据追加到行缓冲区
+        uint16 i;
+        for (i = 0; i < length; i++) {
+            char ch = data[i];
+            if (ch == '\n' || ch == '\r') {
+                // 遇到换行符，解析当前行
+                if (theUARTStreamTask.line_len > 0) {
+                    theUARTStreamTask.line[theUARTStreamTask.line_len] = '\0';
+                    parse_and_handle_line(theUARTStreamTask.line, theUARTStreamTask.line_len);
+                    theUARTStreamTask.line_len = 0;
+                }
+            } else {
+                // 普通字符，存入缓冲区（防止溢出）
+                if (theUARTStreamTask.line_len < RX_LINE_BUFFER_SIZE - 1) {
+                    theUARTStreamTask.line[theUARTStreamTask.line_len++] = ch;
+                } else {
+                    // 缓冲区满，丢弃该行（或可复位）
+                    theUARTStreamTask.line_len = 0;
+                }
+            }
+        }
 
-/*
-    UART_DEBUG(("length:%d\n",length));
-    UART_DEBUG_DUMP(data,length);
-*/
-
-    /* Check if received "hi" */
-    if (length == 2 && data[0] == 'h' && data[1] == 'i') {
-        uart_data_stream_tx_data((const uint8*)"hallo\n", 6);
-    } else {
-        uart_data_stream_tx_data(data, length);
+        // 丢弃已处理的数据
+        SourceDrop(src, length);
     }
-
-    /* Discards the specified amount of bytes from the front of the specified
-    source */
-    SourceDrop(src, length);
 }
+
 void UARTStreamMessageHandler (Task pTask, MessageId pId, Message pMessage)
 {
     UNUSED(pTask);
