@@ -1,0 +1,1 @@
+C:\Users\CQBT\Desktop\test\example1\audio\kalimba\kymera\tools\KCSMaker\out\stre_rom_v02_release\support_lib\cbops/debugobj/dsl_cbops_mute_reset.o: dsl_cbops_mute_reset.asm  C:\Users\CQBT\Desktop\test\example1\audio\kalimba\kymera\support_lib/subsys3_patch0_fw000012B2_map_public.h

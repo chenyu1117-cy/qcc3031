@@ -1,0 +1,1 @@
+C:\Users\CQBT\Desktop\test\example1\audio\kalimba\kymera\tools\KCSMaker\out\stre_rom_v02_release/download/debugobj/kdc_start.o: C:\Users\CQBT\Desktop\test\example1\audio\kalimba\kymera\tools\KCSMaker\out\stre_rom_v02_release\kdc_start.asm 
