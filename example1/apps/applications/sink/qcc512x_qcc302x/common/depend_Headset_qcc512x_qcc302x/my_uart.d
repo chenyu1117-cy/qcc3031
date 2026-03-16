@@ -77,5 +77,6 @@ depend_Headset_qcc512x_qcc302x/my_uart.o: ..\..\my_uart.c \
     ..\..\my_uart.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
-    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\cq_cmd.h 
 

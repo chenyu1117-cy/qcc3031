@@ -261,16 +261,11 @@ void handle_at_command(recv_t *recv)
 
     // 根据命令执行相应操作
     switch (cmd) {
-        case BLINK_START_DISCOVERY:      // "SD" - 开始蓝牙搜索
-            inquiryStart(FALSE);
-            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
+        case BLINK_START_PAIR:      // "DB"
+            // 执行配对操作
+            // 例如：start_pairing(recv->param);
+            uart_data_stream_tx_data((const uint8*)"1111\r\n", 6);
             break;
-    
-        case BLINK_STOP_DISCOVERY:       // "ST" - 停止蓝牙搜索
-            inquiryStop();
-            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
-            break;
-            
         case BLINK_PAIR_MODE:       // "CA"
             // 进入配对模式
             uart_data_stream_tx_data((const uint8*)"2222\r\n", 6);

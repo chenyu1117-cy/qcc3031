@@ -1,8 +1,6 @@
 #ifndef _CQ_CMD_H
 #define _CQ_CMD_H
 
-#include "sink_inquiry.h"
-
 typedef enum {
     BLINK_COMMAND_HEAD,
     BLINK_START_PAIR,     //配对:::DB[addr:12]

@@ -369,6 +369,8 @@
     <file path="../../ahi_test.h"/>
     <file path="../../main.c"/>
     <file path="../../main.h"/>
+    <file path="../../my_uart.c"/>
+    <file path="../../my_uart.h"/>
     <file path="../../sink_a2dp.c"/>
     <file path="../../sink_a2dp.h"/>
     <file path="../../sink_a2dp_aptx_adaptive.c"/>
@@ -618,8 +620,6 @@
     <file path="../../sink_tap_ui.h"/>
     <file path="../../sink_tones.c"/>
     <file path="../../sink_tones.h"/>
-    <file path="../../sink_uart.c"/>
-    <file path="../../sink_uart.h"/>
     <file path="../../sink_upgrade.c"/>
     <file path="../../sink_upgrade.h"/>
     <file path="../../sink_usb.c"/>
