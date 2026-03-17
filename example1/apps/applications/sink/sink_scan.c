@@ -448,14 +448,19 @@ void sinkDisableAllConnectable(void)
     disablePageScan(SINK_SCAN_ALL_REASONS);
 }
 
+extern void sinkInquiryAllocInquiryResults(uint8 size_of_data);
+
 void inquire_and_print(void)
 {
     sinkScanInit();
-    uart_data_stream_tx_data((const uint8*)"Starting inquiry...\r\n", 23);
+    uart_data_stream_tx_data((const uint8*)"HHHH\r\n", 6);
+
+    sinkInquiryAllocInquiryResults(20);
+
     ConnectionWriteScanEnable(hci_scan_enable_inq);
-    uart_data_stream_tx_data((const uint8*)"Scan enabled\r\n", 16);
+    uart_data_stream_tx_data((const uint8*)"JJJJ\r\n", 6);
     ConnectionInquire(&theSink.task, GIAC, 10, 10, 0);
-    uart_data_stream_tx_data((const uint8*)"Inquiring...\r\n", 16);
+    uart_data_stream_tx_data((const uint8*)"KKKK\r\n", 6);
     
 }
 

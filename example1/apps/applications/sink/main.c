@@ -448,7 +448,9 @@ static void handleCLMessage ( Task task, MessageId id, Message message )
         break;
         case CL_DM_INQUIRE_RESULT:
             MAIN_DEBUG_L1(("HS : Inquiry Result\n"));
+            uart_data_stream_tx_data((const uint8*)"AAAA\r\n", 6);
             inquiryHandleResult((CL_DM_INQUIRE_RESULT_T*)message);
+            uart_data_stream_tx_data((const uint8*)"BBBB\r\n", 6);
         break;
         case CL_SM_GET_ATTRIBUTE_CFM:
             MAIN_DEBUG_L1(("HS : CL_SM_GET_ATTRIBUTE_CFM Vol:%d \n",

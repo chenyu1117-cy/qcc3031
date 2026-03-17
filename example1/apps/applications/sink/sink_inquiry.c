@@ -1504,6 +1504,7 @@ RETURNS
 */
 void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
 {
+    uart_data_stream_tx_data((const uint8*)"CCCC\r\n", 6);
 #ifdef ENABLE_SUBWOOFER
     /* Is the inquiry action searching for a subwoofer device? */
     if (sinkInquiryCheckInqActionSub())
@@ -1516,6 +1517,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
     /* Check inquiry data is valid (if not we must have cancelled) */
     if(GINQDATA.inquiry.results)
     {
+        uart_data_stream_tx_data((const uint8*)"DDDD\r\n", 6);
 #ifdef DEBUG_INQ
         uint8 debug_idx;
         INQ_DEBUG(("INQ: Inquiry Result %x Addr %04x,%02x,%06lx RSSI: %d\n", result->status,
@@ -1532,6 +1534,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
 #endif
         if(result->status == inquiry_status_result)
         {
+            uart_data_stream_tx_data((const uint8*)"EEEE\r\n", 6);
 #ifdef ENABLE_PEER
             remote_device peer_device = remote_device_unknown;
 
@@ -1560,7 +1563,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
             {
                 /* ---- 添加串口输出：将发现的设备信息发送到 UART ---- */
                 {
-                    uart_data_stream_tx_data((const uint8*)"Inq Result received\r\n", 21);
+                    uart_data_stream_tx_data((const uint8*)"FFFF\r\n", 6);
                     char buffer[120];
                     bdaddr *addr = &result->bd_addr;
                     int len = snprintf(buffer, sizeof(buffer),
@@ -1628,6 +1631,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
         }
         else
         {
+            uart_data_stream_tx_data((const uint8*)"GGGG\r\n", 6);
             INQ_DEBUG(("INQ: Inquiry Complete\n"));
             /* Attempt to connect to device */
             inquiryConnectFirst();
