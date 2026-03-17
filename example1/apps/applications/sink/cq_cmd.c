@@ -2,6 +2,7 @@
 #include "cq_cmd.h"
 #include <string.h>
 #include "my_uart.h"
+#include "sink_scan.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -270,7 +271,19 @@ void handle_at_command(recv_t *recv)
             // 进入配对模式
             uart_data_stream_tx_data((const uint8*)"2222\r\n", 6);
             break;
-        // ... 添加其他命令处理
+        case BLINK_START_DISCOVERY:// "SD"
+            // 执行查询操作
+            inquire_and_print();
+            uart_data_stream_tx_data((const uint8*)"3333\r\n", 6);
+            break;
+
+        case BLINK_STOP_DISCOVERY:  // "ST"
+            // 停止查询操作
+            inquire_stop();
+            uart_data_stream_tx_data((const uint8*)"4444\r\n", 6);
+            break;
+
+            // ... 添加其他命令处理
         default:
             // 对于没有具体实现的命令，返回OK或ERROR
             uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);

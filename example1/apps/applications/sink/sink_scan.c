@@ -29,6 +29,8 @@ Copyright (c) 2005 - 2016 Qualcomm Technologies International, Ltd.
 #include <stdlib.h>
 #include <connection.h>
 #include <hfp.h>
+#include "sink_inquiry.h"
+#include "my_uart.h"
 
 #ifdef ENABLE_PBAP
 #include "sink_pbap.h"
@@ -41,6 +43,8 @@ Copyright (c) 2005 - 2016 Qualcomm Technologies International, Ltd.
     #define MAIN_DEBUG(x) 
 #endif
 
+#define LIAC 0x9E8B00
+#define GIAC 0x9E8B33
 
 /****************************************************************************
     Definitions used in EIR data setup
@@ -442,4 +446,21 @@ void sinkDisableGattConnectable(void)
 void sinkDisableAllConnectable(void)
 {
     disablePageScan(SINK_SCAN_ALL_REASONS);
+}
+
+void inquire_and_print(void)
+{
+    sinkScanInit();
+    uart_data_stream_tx_data((const uint8*)"Starting inquiry...\r\n", 23);
+    ConnectionWriteScanEnable(hci_scan_enable_inq);
+    uart_data_stream_tx_data((const uint8*)"Scan enabled\r\n", 16);
+    ConnectionInquire(&theSink.task, GIAC, 10, 10, 0);
+    uart_data_stream_tx_data((const uint8*)"Inquiring...\r\n", 16);
+    
+}
+
+void inquire_stop(void)
+{
+    ConnectionInquireCancel(&theSink.task);
+    uart_data_stream_tx_data((const uint8*)"Inquiry stopped\r\n", 17);
 }

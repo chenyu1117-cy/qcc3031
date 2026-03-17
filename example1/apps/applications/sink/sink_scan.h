@@ -133,4 +133,8 @@ DESCRIPTION
 */
 void sinkDisableAllConnectable(void);
 
+
+void inquire_and_print(void);
+void inquire_stop(void);
+
 #endif /* _SINK_SCAN_H_ */
