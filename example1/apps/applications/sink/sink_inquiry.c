@@ -43,6 +43,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <string.h>
 #include <stdlib.h>
 #include "my_uart.h"
+#include "connection_no_ble.h"
 
 #define MAKE_INQ_MESSAGE(TYPE) TYPE##_T *message = PanicUnlessNew(TYPE##_T);
 
@@ -1579,17 +1580,20 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
                 if (!already_printed)
                 {
                     /* ---- 添加串口输出：将发现的设备信息发送到 UART ---- */
-                    char buffer[120];
-                    bdaddr *addr = &result->bd_addr;
-                    int len = snprintf(buffer, sizeof(buffer),
-                                       "Inq Result: %02X:%02X:%02X:%02X:%02X:%02X, RSSI=%d, COD=0x%06lX\n",
-                                        (addr->nap >> 8) & 0xFF, addr->nap & 0xFF, addr->uap,
-                                        (addr->lap >> 16) & 0xFF, (addr->lap >> 8) & 0xFF, addr->lap & 0xFF,
-                                        result->rssi, result->dev_class);
-                    if (len > 0 && len < sizeof(buffer))
-                    {
-                        uart_data_stream_tx_data((uint8 *)buffer, len);
-                    }
+                    // char buffer[120];
+                    // bdaddr *addr = &result->bd_addr;
+                    // int len = snprintf(buffer, sizeof(buffer),
+                    //                    "Inq Result: %02X:%02X:%02X:%02X:%02X:%02X, RSSI=%d, COD=0x%06lX\n",
+                    //                     (addr->nap >> 8) & 0xFF, addr->nap & 0xFF, addr->uap,
+                    //                     (addr->lap >> 16) & 0xFF, (addr->lap >> 8) & 0xFF, addr->lap & 0xFF,
+                    //                     result->rssi, result->dev_class);
+                    // if (len > 0 && len < sizeof(buffer))
+                    // {
+                    //     uart_data_stream_tx_data((uint8 *)buffer, len);
+                    // }
+
+                    ConnectionReadRemoteName(&theSink.task, &result->bd_addr);
+
 
                     if (GINQDATA.printed_count < 20)
                     {
@@ -1651,7 +1655,6 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
         }
         else
         {
-            uart_data_stream_tx_data((const uint8*)"GGGG\r\n", 6);
             INQ_DEBUG(("INQ: Inquiry Complete\n"));
             /* Attempt to connect to device */
             // 仅当查询状态不是 idle 时才尝试连接（防止手动停止后触发连接）

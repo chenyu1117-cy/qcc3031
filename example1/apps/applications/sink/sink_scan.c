@@ -448,15 +448,11 @@ void sinkDisableAllConnectable(void)
     disablePageScan(SINK_SCAN_ALL_REASONS);
 }
 
-extern void sinkInquiryAllocInquiryResults(uint8 size_of_data);
+
 
 void inquire_and_print(void)
 {
-    sinkScanInit();
-    sinkInquiryAllocInquiryResults(20);
-    ConnectionWriteScanEnable(hci_scan_enable_inq);
-    ConnectionInquire(&theSink.task, GIAC, 0, 30, 0);
-    
+    inquiryStart(0);    
 }
 
 void inquire_stop(void)

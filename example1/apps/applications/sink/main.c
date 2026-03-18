@@ -214,7 +214,7 @@ void app_handler(Task task, MessageId id, Message message);
 
 static void handleHFPStatusCFM ( hfp_lib_status pStatus ) ;
 static void sinkConnectionInit(void);
-
+static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message);
 
 #ifdef HOSTED_TEST_ENVIRONMENT
 extern void _sink_init(void);
@@ -683,6 +683,11 @@ static void handleCLMessage ( Task task, MessageId id, Message message )
         case CL_SDP_REGISTER_CFM:
         case CL_DM_WRITE_INQUIRY_ACCESS_CODE_CFM:
         case CL_DM_LINK_SUPERVISION_TIMEOUT_IND:
+        break;
+
+        case CL_DM_REMOTE_NAME_COMPLETE:
+            MAIN_DEBUG_L1(("CL_DM_REMOTE_NAME_COMPLETE\n"));
+            handleRemoteNameComplete((const CL_DM_REMOTE_NAME_COMPLETE_T *)message);
         break;
 
         /*all unhandled connection lib messages end up here*/
@@ -4883,3 +4888,42 @@ bool sinkCommonProcessEvent(sinkEvents_t event, Message message)
 }
 /**  \} */ /* End sink_app group */
 #endif
+
+static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message)
+{
+    char addr_str[18];
+    char name_buf[32];
+   // uint8 i;
+
+    // 转换地址为字符串格式
+    sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            message->bd_addr.nap >> 8, message->bd_addr.nap & 0xFF,
+            message->bd_addr.uap,
+            (message->bd_addr.lap >> 16) & 0xFF,
+            (message->bd_addr.lap >> 8) & 0xFF,
+            message->bd_addr.lap & 0xFF);
+
+    if (message->status == rnr_success && message->size_remote_name > 0)
+    {
+        // 复制名称并确保以 null 结尾
+        uint16 len = message->size_remote_name;
+        if (len > sizeof(name_buf) - 1)
+            len = sizeof(name_buf) - 1;
+        memcpy(name_buf, message->remote_name, len);
+        name_buf[len] = '\0';
+    }
+    else
+    {
+        strcpy(name_buf, "?");
+    }
+
+    // 通过 UART 输出设备信息和名称
+    char output[128];
+    int out_len = snprintf(output, sizeof(output),
+                           "Device found: %s, Name: %s\n",
+                           addr_str, name_buf);
+    if (out_len > 0 && out_len < sizeof(output))
+    {
+        uart_data_stream_tx_data((const uint8 *)output, out_len);
+    }
+}
