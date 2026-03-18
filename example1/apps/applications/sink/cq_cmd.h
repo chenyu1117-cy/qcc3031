@@ -248,6 +248,7 @@ extern char* default_commands[BLINK_CMD_NUM];
 extern char* default_indicates[BLINK_IND_NUM];
 
 void handle_at_command(recv_t *recv);
+bool strToBdaddr(const char *str, bdaddr *addr);
 
 
 #endif // AT_CMD_ENUM_H

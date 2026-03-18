@@ -3,6 +3,9 @@
 #include <string.h>
 #include "my_uart.h"
 #include "sink_scan.h"
+#include "sink_inquiry.h"
+#include <stdio.h>
+#include "connection_no_ble.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -262,25 +265,36 @@ void handle_at_command(recv_t *recv)
 
     // 根据命令执行相应操作
     switch (cmd) {
-        case BLINK_START_PAIR:      // "DB"
-            // 执行配对操作
-            // 例如：start_pairing(recv->param);
-            uart_data_stream_tx_data((const uint8*)"1111\r\n", 6);
-            break;
-        case BLINK_PAIR_MODE:       // "CA"
-            // 进入配对模式
-            uart_data_stream_tx_data((const uint8*)"2222\r\n", 6);
-            break;
         case BLINK_START_DISCOVERY:// "SD"
             // 执行查询操作
-            inquire_and_print();
-            uart_data_stream_tx_data((const uint8*)"3333\r\n", 6);
+            inquiryStart(0); 
+            uart_data_stream_tx_data((const uint8*)"inquiry_start\r\n", 15);
             break;
 
         case BLINK_STOP_DISCOVERY:  // "ST"
             // 停止查询操作
-            inquire_stop();
-            uart_data_stream_tx_data((const uint8*)"4444\r\n", 6);
+            inquiryStop();
+            uart_data_stream_tx_data((const uint8*)"inquiry_stop\r\n", 14);
+            break;
+
+        case BLINK_CONNECT_DEVICE:      // "CC[xx:xx:xx:xx:xx:xx]"
+        {
+            // 执行配对操作
+            bdaddr addr;
+            if (strToBdaddr(recv->param, &addr))
+            {
+                ConnectionDmAclOpen(&addr);
+                uart_data_stream_tx_data((const uint8*)"connect...\r\n", 12);
+            }
+            else
+            {
+                uart_data_stream_tx_data((const uint8*)"connect failed\r\n", 16);
+            }
+            break;
+        }
+        case BLINK_DISCONNECT_DEVICE:       // "CD"
+            // 断开连接
+            uart_data_stream_tx_data((const uint8*)"disconnect\r\n", 12);
             break;
 
             // ... 添加其他命令处理
@@ -289,4 +303,36 @@ void handle_at_command(recv_t *recv)
             uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
             break;
     }
+}
+
+bool strToBdaddr(const char *str, bdaddr *addr) {
+    uint8_t b[6] = {0};
+    int idx = 0;
+    int nibble = 0;   // 0=等待高4位，1=等待低4位
+    uint8_t val = 0;
+
+    while (*str && idx < 6) {
+        char c = *str++;
+        uint8_t digit;
+        if (c >= '0' && c <= '9') digit = c - '0';
+        else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+        else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+        else continue;   // 跳过所有非十六进制字符（包括冒号、括号、空格、换行等）
+
+        if (nibble == 0) {
+            val = digit << 4;
+            nibble = 1;
+        } else {
+            val |= digit;
+            b[idx++] = val;
+            nibble = 0;
+        }
+    }
+
+    if (idx != 6) return FALSE;
+
+    addr->nap = (b[0] << 8) | b[1];
+    addr->uap = b[2];
+    addr->lap = (b[3] << 16) | (b[4] << 8) | b[5];
+    return TRUE;
 }

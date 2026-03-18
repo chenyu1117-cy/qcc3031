@@ -448,15 +448,3 @@ void sinkDisableAllConnectable(void)
     disablePageScan(SINK_SCAN_ALL_REASONS);
 }
 
-
-
-void inquire_and_print(void)
-{
-    inquiryStart(0);    
-}
-
-void inquire_stop(void)
-{
-    inquiryStop();
-    uart_data_stream_tx_data((const uint8*)"Inquiry stopped\r\n", 17);
-}
