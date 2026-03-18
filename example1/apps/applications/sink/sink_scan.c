@@ -453,19 +453,14 @@ extern void sinkInquiryAllocInquiryResults(uint8 size_of_data);
 void inquire_and_print(void)
 {
     sinkScanInit();
-    uart_data_stream_tx_data((const uint8*)"HHHH\r\n", 6);
-
     sinkInquiryAllocInquiryResults(20);
-
     ConnectionWriteScanEnable(hci_scan_enable_inq);
-    uart_data_stream_tx_data((const uint8*)"JJJJ\r\n", 6);
-    ConnectionInquire(&theSink.task, GIAC, 10, 10, 0);
-    uart_data_stream_tx_data((const uint8*)"KKKK\r\n", 6);
+    ConnectionInquire(&theSink.task, GIAC, 0, 30, 0);
     
 }
 
 void inquire_stop(void)
 {
-    ConnectionInquireCancel(&theSink.task);
+    inquiryStop();
     uart_data_stream_tx_data((const uint8*)"Inquiry stopped\r\n", 17);
 }
