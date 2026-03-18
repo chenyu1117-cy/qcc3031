@@ -53,5 +53,14 @@ depend_Headset_qcc512x_qcc302x/cq_cmd.o: ..\..\cq_cmd.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source_.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\app\vm\vm_if.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\app\stream\stream_if.h \
-    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\sink_scan.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection_no_ble.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\bdaddr_.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\vmtypes.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink_.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\csb_.h 
 

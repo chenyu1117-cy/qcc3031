@@ -228,5 +228,10 @@ depend_Headset_qcc512x_qcc302x/sink_inquiry.o: ..\..\sink_inquiry.c \
     ..\..\sink_inquiry_config_def.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\config_store.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\bdaddr.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection_no_ble.h \
     ..\..\sink_debug.h 
 
