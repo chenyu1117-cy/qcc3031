@@ -6,6 +6,7 @@
 #include "sink_inquiry.h"
 #include <stdio.h>
 #include "connection_no_ble.h"
+#include "sink_slc.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -279,11 +280,14 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_CONNECT_DEVICE:      // "CC[xx:xx:xx:xx:xx:xx]"
         {
+            
+            sinkEnableDiscoverable();
+            sinkEnableConnectable();
             // 执行配对操作
             bdaddr addr;
             if (strToBdaddr(recv->param, &addr))
             {
-                ConnectionDmAclOpen(&addr);
+                slcConnectDevice(&addr,sink_hfp | sink_a2dp | sink_avrcp);
                 uart_data_stream_tx_data((const uint8*)"connect...\r\n", 12);
             }
             else

@@ -16,7 +16,7 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
 /****************************************************************************
     Header files
 */
-
+#define DEBUG_MAIN
 #include "sink_sport_health_sm.h"
 #include "sink_sport_health.h"
 #include "sink_tap_ui.h"
@@ -2005,6 +2005,8 @@ static void handleUEMessage  ( Task task, MessageId id, Message message )
             MAIN_DEBUG(("EventSysError\n")) ;
         break;
         case EventSysReconnectFailed:
+            sinkEnableDiscoverable();
+            sinkEnableConnectable();
             MAIN_DEBUG(("EventSysReconnectFailed\n")) ;
         break;
 
@@ -4730,6 +4732,7 @@ int main(void)
 
     /* Test UART by sending a message */
     uart_data_stream_tx_data((const uint8*)"UART Test OK\n", 13);
+
 
     /* Start the message scheduler loop */
     MessageLoop();

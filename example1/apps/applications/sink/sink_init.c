@@ -513,6 +513,7 @@ void InitUserFeatures ( void )
     
     /* set task to receive system messages */
     MessageSystemTask(&theSink.task);
+    MessageSend( &theSink.task , EventUsrPowerOn , NULL ) ;
     
     INIT_DEBUG(("INIT: complete\n"));
 }
