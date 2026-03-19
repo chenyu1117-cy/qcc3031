@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "connection_no_ble.h"
 #include "sink_slc.h"
+#include "sink_main_task.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -297,7 +298,13 @@ void handle_at_command(recv_t *recv)
             break;
         }
         case BLINK_DISCONNECT_DEVICE:       // "CD"
-            // 断开连接
+            // 断开连接，清空pdl
+            // 1. 断开所有SLC连接
+            sinkDisconnectAllSlc();
+            // 2. 清空PDL（配对设备列表）
+            deviceManagerRemoveAllDevices();
+            /* 发送进入配对模式的事件 */
+            MessageSend(&theSink.task, EventSysEnterPairingEmptyPDL, 0);
             uart_data_stream_tx_data((const uint8*)"disconnect\r\n", 12);
             break;
 
