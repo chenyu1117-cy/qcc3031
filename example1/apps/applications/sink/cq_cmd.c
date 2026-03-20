@@ -355,6 +355,17 @@ void handle_at_command(recv_t *recv)
             uart_data_stream_tx_data((const uint8*)"Music info query sent\n", 23);
             break;
             
+            case BLINK_MODIFY_LOCAL_NAME:   // "MM[name]"
+            //更改LOCAL Name
+            if (recv->param && strlen(recv->param) > 0)
+            {
+                uint16 nameLength = strlen(recv->param);
+                ConnectionChangeLocalName(nameLength, (const uint8*)recv->param);
+                uart_data_stream_tx_data((const uint8*)"Local name changed\r\n", 19);
+            } else {
+                uart_data_stream_tx_data((const uint8*)"ERROR: Missing name parameter\r\n", 33);
+            }
+            break;
 
             // ... 添加其他命令处理
         default:
