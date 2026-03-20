@@ -8,6 +8,7 @@
 #include "connection_no_ble.h"
 #include "sink_slc.h"
 #include "sink_main_task.h"
+#include "sink_avrcp.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -307,6 +308,53 @@ void handle_at_command(recv_t *recv)
             MessageSend(&theSink.task, EventSysEnterPairingEmptyPDL, 0);
             uart_data_stream_tx_data((const uint8*)"disconnect\r\n", 12);
             break;
+
+            case BLINK_INQUIRY_PAIR_RECORD:// "MX"
+            //查询配对记录
+            uart_data_stream_tx_data((const uint8*)"Device status displayed\n", 22);
+            break;
+
+            case BLINK_INQUIRY_CUR_BT_INFO:// "QI"
+            //查询当前连接设备信息
+            uart_data_stream_tx_data((const uint8*)"Connection status displayed\n", 26);
+            break;
+
+            case BLINK_PLAY_PAUSE_MUSIC:  // "MA"        
+            //播放/暂停音乐:::MA
+            sinkAvrcpPlayPause();
+            uart_data_stream_tx_data((const uint8*)"Play/Pause music command sent\n", 28);
+            break;
+    
+            case BLINK_NEXT_SOUND:   // "MD"
+            //下一曲:::MD
+            sinkAvrcpSkipForward();
+            uart_data_stream_tx_data((const uint8*)"Next track command sent\n", 26);
+            break;
+
+            case BLINK_PREV_SOUND:    //"ME"              
+            //上一曲:::ME
+            sinkAvrcpSkipBackward();
+            uart_data_stream_tx_data((const uint8*)"Previous track command sent\n", 30);
+            break;
+
+            case BLINK_FAST_FORWARD:   // "MR"              
+            //快进:::MR
+            sinkAvrcpFastForwardPress();
+            uart_data_stream_tx_data((const uint8*)"Fast forward command sent\n", 27);
+            break;
+
+            case BLINK_FAST_BACK:   // "MT"              
+            //快退:::MT
+            sinkAvrcpRewindPress();
+            uart_data_stream_tx_data((const uint8*)"Fast rewind command sent\n", 28);
+            break;
+
+            case BLINK_INQUIRY_MUSIC_INFO:   // "MK"              
+            //查询Music信息
+            sinkAvrcpRetrieveNowPlayingRequest(0, 0, TRUE);
+            uart_data_stream_tx_data((const uint8*)"Music info query sent\n", 23);
+            break;
+            
 
             // ... 添加其他命令处理
         default:

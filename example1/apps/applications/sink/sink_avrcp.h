@@ -48,7 +48,7 @@ Copyright (c) 2005 - 2017 Qualcomm Technologies International, Ltd.
 
 
 /* Define to allow display of Now Playing information */
-#define ENABLE_AVRCP_NOW_PLAYINGx
+#define ENABLE_AVRCP_NOW_PLAYING
 /* Define to allow display of Player Application Settings */
 #define ENABLE_AVRCP_PLAYER_APP_SETTINGSx
 

@@ -57,8 +57,9 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <string.h>
 #include <vm.h>
 #include <vmal.h>
-
-
+#include "my_uart.h"
+#include <stdio.h>
+#define DEBUG_AVRCP
 #ifdef DEBUG_AVRCP
 #define AVRCP_DEBUG(x) DEBUG(x)
 #else
@@ -2491,6 +2492,9 @@ DESCRIPTION
 static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTES_CFM_T *msg)
 {
     uint16 Index;
+    char title[128] = {0};
+    char artist[128] = {0};
+    char album[128] = {0}; 
 
     if ((msg->status == avrcp_success) && (sinkAvrcpGetIndexFromInstance(msg->avrcp, &Index)))
     {
@@ -2539,11 +2543,31 @@ static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTE
                 
                 AVRCP_DEBUG(("AVRCP NOW PLAYING:\n"));
                 
-                if (attribute_length)
-                    sinkAvrcpDisplayMediaAttributes(attribute_id, attribute_length, &lSource[i + 8]);
+                if (attribute_length) 
+                {
+                    // 直接处理属性数据，根据 attribute_id 填充对应变量
+                    switch (attribute_id)
+                    {
+                        case AVRCP_MEDIA_ATTRIBUTE_TITLE: // 标题属性ID
+                            if (attribute_length < sizeof(title))
+                                strncpy(title, (const char*)&lSource[i + 8], attribute_length);
+                            break;
+                        case AVRCP_MEDIA_ATTRIBUTE_ARTIST: // 艺术家属性ID
+                            if (attribute_length < sizeof(artist))
+                                strncpy(artist, (const char*)&lSource[i + 8], attribute_length);
+                            break;
+                        case AVRCP_MEDIA_ATTRIBUTE_ALBUM: // 专辑属性ID
+                            if (attribute_length < sizeof(album))
+                                strncpy(album, (const char*)&lSource[i + 8], attribute_length);
+                            break;
+                        default:
+                            // 其他属性，可根据需要添加
+                            break;
+                    }
+                }
 
-                i = header_end + attribute_length;
-                header_end = i + AVRCP_GET_ELEMENT_ATTRIBUTES_CFM_HEADER_SIZE;
+                i = header_end + attribute_length; 
+                header_end = i + AVRCP_GET_ELEMENT_ATTRIBUTES_CFM_HEADER_SIZE; 
             }
                     
             /* finished processing the source */
@@ -2567,6 +2591,9 @@ static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTE
         {
             AVRCP_DEBUG(("   fail; no source; num attributes zero\n"));
         }
+        char buffer[512];
+        snprintf(buffer, sizeof(buffer), "MI[%s][FF][%s][FF][%s][FF][0]\n", title, artist, album);
+        uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     }
     else
     {
