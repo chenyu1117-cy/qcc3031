@@ -103,6 +103,8 @@ typedef struct
     Source last_source;
 } avrcp_data;
 
+static uint32 gTotalDuration = 0;
+
 static avrcp_data gAvrcpData;
 
 /* Global data for AVRCP */
@@ -218,6 +220,15 @@ static void updateDisplay (void)
     {
         displayRemoveText(SINK_TEXT_TYPE_MEDIA_INFO);
         AVRCP_DATA.media_info_displayed = FALSE;
+    }
+}
+
+static void sinkAvrcpRetrievePlayStatus(void)
+{
+    uint16 activeIndex = sinkAvrcpGetActiveConnection();
+    if (AVRCP_DATA.connected[activeIndex])
+    {
+        AvrcpGetPlayStatusRequest(AVRCP_DATA.avrcp[activeIndex]);
     }
 }
 
@@ -2267,6 +2278,21 @@ static void handleAvrcpGetPlayStatusCfm(const AVRCP_GET_PLAY_STATUS_CFM_T *msg)
             setPlayStatus(Index, (SinkAvrcp_play_status)(1 << msg->play_status));
         else
             setPlayStatus(Index, (SinkAvrcp_play_status)msg->play_status);
+        
+        // 存储总时间
+        gTotalDuration = msg->song_length;
+        
+        // 打印初始状态
+        uint32 position = msg->song_elapsed;
+        uint8 percentage = 0;
+        if (gTotalDuration > 0)
+        {
+            percentage = (position * 100) / gTotalDuration;
+        }
+        
+        char buffer[60];
+        sprintf(buffer, "Playback: %u/%u (%u%%)\r\n", position, gTotalDuration, percentage);
+        uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     }
 }
 
@@ -2387,6 +2413,8 @@ static void handleAvrcpPlayStatusChangedInd(const AVRCP_EVENT_PLAYBACK_STATUS_CH
                     suspendWhenSubwooferStreamingLowLatency(a2dp_link);
 #endif
                 }
+                // 当播放状态变为播放时，获取总时间
+                sinkAvrcpRetrievePlayStatus();
             }
             else if (AVRCP_DATA.play_status[Index] == sinkavrcp_play_status_stopped ||
                      AVRCP_DATA.play_status[Index] == sinkavrcp_play_status_paused)
@@ -2724,6 +2752,18 @@ static void handleAvrcpPlaybackPosChangedInd(const AVRCP_EVENT_PLAYBACK_POS_CHAN
                 /* re-register to receive notifications */
                 AvrcpRegisterNotificationRequest(msg->avrcp, avrcp_event_playback_pos_changed, AVRCP_PLAYBACK_POSITION_TIME_INTERVAL);                 
             }
+            
+            // 计算并打印百分比
+            uint32 position = msg->playback_pos;
+            uint8 percentage = 0;
+            if (gTotalDuration > 0)
+            {
+                percentage = (position * 100) / gTotalDuration;
+            }
+            
+            char buffer[60];
+            sprintf(buffer, "Playback: %u/%u (%u%%)\r\n", position, gTotalDuration, percentage);
+            uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
         }     
         else
         {
