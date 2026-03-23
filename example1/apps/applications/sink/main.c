@@ -4062,10 +4062,23 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
     break ;
     case HFP_CURRENT_CALLS_IND:
-        MAIN_DEBUG_L1(("HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\n" ,
+    {
+        char output[96];
+        int out_len;
+        MAIN_DEBUG(("HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\n" ,
                                         ((const HFP_CURRENT_CALLS_IND_T*)message)->call_idx ,
                                         ((const HFP_CURRENT_CALLS_IND_T*)message)->multiparty  ,
                                         ((const HFP_CURRENT_CALLS_IND_T*)message)->status)) ;
+
+        out_len = snprintf(output, sizeof(output), "HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]",
+                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->call_idx , //表示当前通话的序号
+                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->multiparty  , //0-非多方通话  1-多方通话
+                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->status); //0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
+        if (out_len > 0 && out_len < sizeof(output))
+        {
+            uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+    }
     break;
     case HFP_AUDIO_CONNECT_IND:
         MAIN_DEBUG_L1(("HFP_AUDIO_CONNECT_IND\n")) ;

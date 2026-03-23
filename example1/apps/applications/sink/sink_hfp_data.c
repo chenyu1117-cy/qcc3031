@@ -26,7 +26,7 @@ DESCRIPTION
 #include <boot.h>
 #include <byte_utils.h>
 
-
+#define DEBUG_HFP
 #ifdef DEBUG_HFP
 #define HFP_DATA_DEBUG(x) DEBUG(x)
 #else

@@ -9,6 +9,7 @@
 #include "sink_slc.h"
 #include "sink_main_task.h"
 #include "sink_avrcp.h"
+#include "../../libs/hfp/hfp.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -365,6 +366,90 @@ void handle_at_command(recv_t *recv)
             } else {
                 uart_data_stream_tx_data((const uint8*)"ERROR: Missing name parameter\r\n", 33);
             }
+            break;
+
+            case BLINK_ACCEPT_INCOMING:   // "CE"
+            //接听来电
+            HfpCallAnswerRequest(hfp_primary_link, 1);
+            break;
+
+            case BLINK_REJECT_INCOMMMING:   // "CF"
+            //拒接来电
+            HfpCallAnswerRequest(hfp_primary_link, 0);
+            break;
+
+             case BLINK_FINISH_PHONE:    // "CG"
+            //结束通话
+            HfpCallTerminateRequest(hfp_primary_link);
+            break;
+
+            case BLINK_REDIAL:    // "CH"
+            //重拨 
+            break;
+
+            case BLINK_VOICE_DIAL:    // "CI"
+            //语音拨号
+            break;
+
+            case BLINK_CANCEL_VOICE_DIAL:    // "CJ"
+            //取消语音拨号
+            break;
+
+            case BLINK_VOLUME_UP:    // "CK"
+            //音量调节:::CK -- Music +
+            break;
+
+            case BLINK_VOLUME_DOWN:    // "CL"
+            //音量调节:::CL -- Music -
+            break;
+
+            case BLINK_MIC_OPEN_CLOSE:    // "CM"
+            //麦克风打开/关闭
+            break;
+
+            case BLINK_VOICE_TO_PHONE:    // "CN"
+            //语音切换到手机
+            HfpAudioTransferRequest(hfp_primary_link, hfp_audio_to_ag, sync_all_sco, NULL);
+            break;
+
+            case BLINK_VOICE_TO_BLUE:    // "CP"
+            //语音切换到蓝牙
+            HfpAudioTransferRequest(hfp_primary_link, hfp_audio_to_hfp, sync_all_sco, NULL);
+
+            break;
+
+            case BLINK_VOICE_TRANSFER:    // "CO"
+            //语音在蓝牙和手机之间切换
+            HfpAudioTransferRequest(hfp_primary_link, hfp_audio_transfer, sync_all_sco, NULL);
+            break;
+
+            case BLINK_HANG_UP_WAIT_PHONE:    // "CQ"
+            //挂断等待来电
+            HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_held_reject_waiting, 0);
+            break;
+
+            case BLINK_HANG_UP_CURRENT_ACCEPT_WAIT:    // "CR"
+            //挂断当前通话,接听等待来电
+            HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_active_accept_other, 0);
+            break;
+
+            case BLINK_HOLD_CURRENT_ACCEPT_WAIT:    // "CS"
+            //保持当前通话接听等待来电
+            HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_hold_active_accept_other, 0);
+            break;
+
+            case BLINK_MEETING_PHONE:    // "CT"
+            //会议电话
+            break;
+
+            case BLINK_INQUIRY_HFP_STATUS:    // "CY"
+            //查询HFP状态
+            HfpCurrentCallsRequest(hfp_primary_link);
+            break;
+
+            case BLINK_DTMF:    // "CX"
+            //拨打分机号:::CX[DTMF:1]
+            HfpDtmfRequest(hfp_primary_link, recv->param[0]);
             break;
 
             // ... 添加其他命令处理
