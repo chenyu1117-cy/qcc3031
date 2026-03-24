@@ -17,6 +17,9 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
     Header files
 */
 #define DEBUG_MAIN
+#ifndef ENABLE_PBAP
+#define ENABLE_PBAP
+#endif
 #include "sink_sport_health_sm.h"
 #include "sink_sport_health.h"
 #include "sink_tap_ui.h"
@@ -4740,6 +4743,7 @@ int main(void)
 
     /* Start protection mechanism for buffer defences */
     watchdogReset();
+
 
     uart_device_init();
 

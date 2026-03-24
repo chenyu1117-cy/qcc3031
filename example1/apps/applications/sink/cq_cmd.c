@@ -10,6 +10,7 @@
 #include "sink_main_task.h"
 #include "sink_avrcp.h"
 #include "../../libs/hfp/hfp.h"
+#include "sink_pbap.h"
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -450,6 +451,23 @@ void handle_at_command(recv_t *recv)
             case BLINK_DTMF:    // "CX"
             //拨打分机号:::CX[DTMF:1]
             HfpDtmfRequest(hfp_primary_link, recv->param[0]);
+            break;
+
+            case BLINK_SET_PHONE_PHONE_BOOK:    // "PA"
+            //读取手机电话本
+            if (pbapConnect(hfp_primary_link)) 
+            { 
+                pbapSetActivePhonebook(pbap_pb); 
+                pbapSetCommand(pbapc_downloading); 
+                
+                // 延迟发送拉取请求
+                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
+            }
+
+            break;
+
+             case BLINK_SET_RECENT_CALLLOG:    // "PK"
+            //读取最近通话记录
             break;
 
             // ... 添加其他命令处理

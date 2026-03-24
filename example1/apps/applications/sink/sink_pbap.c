@@ -26,9 +26,12 @@ Copyright (c) 2009 - 2017 Qualcomm Technologies International, Ltd.
 #include <source.h>
 
 #include <display.h>
-
+#ifndef ENABLE_PBAP
+#define ENABLE_PBAP
+#endif
 #ifdef ENABLE_PBAP
 
+#include "my_uart.h"
 #include <pbapc.h>
 #include <md5.h>
 
@@ -45,7 +48,7 @@ Copyright (c) 2009 - 2017 Qualcomm Technologies International, Ltd.
 #include "config_definition.h"
 #include"sink_pbap_config_def.h" 
 #include <config_store.h>
-
+#define DEBUG_PBAP
 #ifdef DEBUG_PBAP
     #define PBAP_DEBUG(x) {printf x;}
 #else
@@ -902,30 +905,37 @@ static void handlePullVCardListCfm(const PBAPC_PULL_VCARD_LISTING_CFM_T *pMsg)
 
 static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
 {
+    const uint8 *lSource = SourceMap(pMsg->src);
+    uint16 i;
+   
+    PBAP_DEBUG(("PBAPC_PULL_PHONEBOOK_CFM, source:[%p], pbsize:[%d], datalen:[%d]\n", (const void*)lSource,  pMsg->pbookSize, pMsg->dataLen));
 
-#ifdef DEBUG_PBAP    
+    PBAP_DEBUG(("The pb data is: "));
+
+    if (lSource == NULL)
     {
-        const uint8 *lSource = SourceMap(pMsg->src);
-        uint16 i;
-       
-        PBAP_DEBUG(("PBAPC_PULL_PHONEBOOK_CFM, source:[%p], pbsize:[%d], datalen:[%d]\n", (const void*)lSource,  pMsg->pbookSize, pMsg->dataLen));
-
-        PBAP_DEBUG(("The pb data is: "));
-
-        if (lSource == NULL)
-        {
-            PBAP_DEBUG(("NULL"));
-        }
-        else
-        {
-            for(i = 0; i < pMsg->dataLen; i++)
-                PBAP_DEBUG(("%c", *(lSource + i))); 
-        }
-        PBAP_DEBUG(("\n"));    
+        PBAP_DEBUG(("NULL"));
     }
-#endif    
+    else
+    {
+        // 发送数据到 UART
+        const char *header = "=== Phonebook Data ===\r\n";
+        uart_data_stream_tx_data((const uint8 *)header, strlen(header));
+        
+        // 发送原始电话本数据
+        uart_data_stream_tx_data(lSource, pMsg->dataLen);
+        
+        // 发送分隔符
+        const char *footer = "====================\r\n";
+        uart_data_stream_tx_data((const uint8 *)footer, strlen(footer));
+        
+        // 原始调试输出
+        for(i = 0; i < pMsg->dataLen; i++)
+            PBAP_DEBUG(("%c", *(lSource + i))); 
+    }
+    PBAP_DEBUG(("\n"));    
 
-      /* Read more data for pbap dial fail or other pbap features */
+    /* Read more data for pbap dial fail or other pbap features */
     if (pMsg->status == pbapc_pending)
     {
         PBAP_DEBUG(("    Requesting next Packet\n"));

@@ -14,7 +14,9 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #ifdef ACTIVITY_MONITORING
 #include "sink_sport_health.h"
 #endif
-
+#ifndef ENABLE_PBAP
+#define ENABLE_PBAP
+#endif
 #include "sink_private_data.h"
 #include "sink_main_task.h"
 #include "sink_init.h"
