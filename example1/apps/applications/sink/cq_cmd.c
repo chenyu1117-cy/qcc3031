@@ -461,14 +461,47 @@ void handle_at_command(recv_t *recv)
                 pbapSetCommand(pbapc_downloading); 
                 
                 // 延迟发送拉取请求
-                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
+                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 200); 
             }
 
             break;
 
-             case BLINK_SET_RECENT_CALLLOG:    // "PK"
-            //读取最近通话记录
+            case BLINK_SET_OUT_GOING_CALLLOG:    // "PH"
+            //读取已拨通话记录
+            if (pbapConnect(hfp_primary_link)) 
+            { 
+                pbapSetActivePhonebook(pbap_och);
+                pbapSetCommand(pbapc_downloading);
+                
+                // 延迟发送拉取请求
+                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 200); 
+            }
             break;
+
+            case BLINK_SET_INCOMING_CALLLOG:    // "PI"
+            //读取已接通话记录
+            if (pbapConnect(hfp_primary_link)) 
+            { 
+                pbapSetActivePhonebook(pbap_ich);
+                pbapSetCommand(pbapc_downloading);
+                
+                // 延迟发送拉取请求
+                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 200); 
+            }
+            break;
+
+            case BLINK_SET_MISSED_CALLLOG:    // "PJ"
+            //读取未接通话记录
+            if (pbapConnect(hfp_primary_link)) 
+            { 
+                pbapSetActivePhonebook(pbap_mch);
+                pbapSetCommand(pbapc_downloading);
+                
+                // 延迟发送拉取请求
+                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 200); 
+            }
+            break;
+
 
             // ... 添加其他命令处理
         default:

@@ -1290,19 +1290,16 @@ static bool handlePbapDialData(const uint8 *pVcard, const uint16 vcardLen)
 
 static void handlePbapRetrievedData(const uint8 *pVcard, const uint16 vcardLen)
 {
-    /* Display the content of the retrieved data.*/
-    #ifdef DEBUG_PBAP
+    /* Send the retrieved data to UART */
+    if (pVcard && vcardLen > 0)
     {
-        uint8 i = 0;
-        for(i = 0; i < vcardLen; i++)
-            PBAP_DEBUG(("%c ", *(pVcard + i)));
-            
-        PBAP_DEBUG(("\n"));
+        /* Send the raw vCard data to UART */
+        uart_data_stream_tx_data(pVcard, vcardLen);
+        
+        /* Send a newline to separate records */
+        const uint8 newline[] = "\n";
+        uart_data_stream_tx_data(newline, sizeof(newline) - 1);
     }
-    #else
-    UNUSED(vcardLen);
-    UNUSED(pVcard);
-    #endif
 }
 
 static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status status, const uint8 *lSource, const uint16 dataLen)
