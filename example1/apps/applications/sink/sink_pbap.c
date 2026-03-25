@@ -68,6 +68,31 @@ typedef struct
     uint8 pName[1];    
 }pbapMetaData;
 
+
+typedef enum {
+    PBAP_TYPE_PHONEBOOK,
+    PBAP_TYPE_OCH,
+    PBAP_TYPE_ICH,
+    PBAP_TYPE_MCH
+} pbap_entry_type_t;
+
+#define MAX_NAME_LEN 64
+#define MAX_TEL_LEN 32
+#define MAX_ENTRIES 50
+
+typedef struct {
+    char name[MAX_NAME_LEN];
+    char tel[MAX_TEL_LEN];
+    pbap_entry_type_t type;
+} pbap_entry_t;
+
+typedef struct {
+    pbap_entry_t entries[MAX_ENTRIES];
+    uint16 count;
+} pbap_storage_t;
+
+static pbap_storage_t g_pbap_storage;
+
 /* Message Handler Prototypes */
 static void handlePbapInitCfm(const PBAPC_INIT_CFM_T *pMsg);
 static void handlePbapConnectCfm(const PBAPC_CONNECT_CFM_T *pMsg);
@@ -91,6 +116,10 @@ static bool handlePbapDialData(const uint8* pVcard, const uint16 vcardLen);
 static void handlePbapRetrievedData(const uint8 *pVcard, const uint16 vcardLen);
 static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status status, const uint8 *lSource, const uint16 dataLen);
 static void pbapDial(uint8 phonebook);
+static void pbapStorageInit(void);
+static bool pbapStorageAddEntry(const char *name, const char *tel, pbap_entry_type_t type);
+static void pbapStorageClear(void);
+static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_type_t type);
 
 /* Sink PBAP global data */
 typedef struct __sink_pbap_global_data_t
@@ -108,6 +137,7 @@ typedef struct __sink_pbap_global_data_t
     unsigned       pbap_access:1;
     unsigned       unused:13;
 }sink_pbap_global_data_t;
+
 
 /* PBAP global data structure instance */ 
 static sink_pbap_global_data_t pbap_gdata;
@@ -433,6 +463,7 @@ void initPbap(void)
     pbapSetActivePhonebook(pbap_pb);
     pbapSetBrowseEntryIndex(1);
     pbapSetHfpLink(0);
+    pbapStorageInit();
     
     /* Initialise the PBAP library */
 	PbapcInit(&theSink.task);
@@ -905,51 +936,57 @@ static void handlePullVCardListCfm(const PBAPC_PULL_VCARD_LISTING_CFM_T *pMsg)
 
 static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
 {
-    const uint8 *lSource = SourceMap(pMsg->src);
-    uint16 i;
-   
-    PBAP_DEBUG(("PBAPC_PULL_PHONEBOOK_CFM, source:[%p], pbsize:[%d], datalen:[%d]\n", (const void*)lSource,  pMsg->pbookSize, pMsg->dataLen));
-
-    PBAP_DEBUG(("The pb data is: "));
-
-    if (lSource == NULL)
+#ifdef DEBUG_PBAP    
     {
-        PBAP_DEBUG(("NULL"));
+        const uint8 *lSource = SourceMap(pMsg->src);
+        uint16 i;
+        PBAP_DEBUG(("PBAPC_PULL_PHONEBOOK_CFM, source:[%p], pbsize:[%d], datalen:[%d]\n", (const void*)lSource, pMsg->pbookSize, pMsg->dataLen));
+        PBAP_DEBUG(("The pb data is: "));
+        if (lSource == NULL)
+        {
+            PBAP_DEBUG(("NULL"));
+        }
+        else
+        {
+            for(i = 0; i < pMsg->dataLen; i++)
+                PBAP_DEBUG(("%c", *(lSource + i))); 
+        }
+        PBAP_DEBUG(("\n"));    
     }
-    else
-    {
-        // 发送数据到 UART
-        const char *header = "=== Phonebook Data ===\r\n";
-        uart_data_stream_tx_data((const uint8 *)header, strlen(header));
-        
-        // 发送原始电话本数据
-        uart_data_stream_tx_data(lSource, pMsg->dataLen);
-        
-        // 发送分隔符
-        const char *footer = "====================\r\n";
-        uart_data_stream_tx_data((const uint8 *)footer, strlen(footer));
-        
-        // 原始调试输出
-        for(i = 0; i < pMsg->dataLen; i++)
-            PBAP_DEBUG(("%c", *(lSource + i))); 
-    }
-    PBAP_DEBUG(("\n"));    
+#endif
 
-    /* Read more data for pbap dial fail or other pbap features */
+    /* 如果当前数据包有数据，立即解析 */
+    if (pMsg->dataLen > 0 && pMsg->src != NULL)
+    {
+        const uint8 *lSource = SourceMap(pMsg->src);
+        if (lSource)
+        {
+            /* 确定电话簿类型（根据当前活动的电话簿） */
+            pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
+            uint8 activePb = pbapGetActivePhonebook();
+            if (activePb == pbap_och)
+                type = PBAP_TYPE_OCH;
+            else if (activePb == pbap_ich)
+                type = PBAP_TYPE_ICH;
+            else if (activePb == pbap_mch)
+                type = PBAP_TYPE_MCH;
+            
+            /* 直接解析当前包数据（假设每个包内包含完整的 vCard 条目） */
+            parseAndStoreVcard(lSource, pMsg->dataLen, type);
+        }
+    }
+
+    /* 根据状态决定后续操作 */
     if (pMsg->status == pbapc_pending)
     {
         PBAP_DEBUG(("    Requesting next Packet\n"));
         PbapcPullContinue(pMsg->device_id);
     }
-    else
-    { 
+    else /* 完成或错误 */
+    {
         PBAP_DEBUG(("    Requesting complete.\n"));
-        /* Send Complete to Server */
         PbapcPullComplete(pMsg->device_id);
-
-        /* Set the link policy based on the HFP or A2DP state */
-        linkPolicyPhonebookAccessComplete(PbapcGetSink(pbapGetActiveLink()));     
-
+        linkPolicyPhonebookAccessComplete(PbapcGetSink(pbapGetActiveLink()));
         pbapSetCommand(pbapc_action_idle);
     }
 }
@@ -1012,6 +1049,7 @@ static void handleAppPullVcardList(void)
 
 static void handleAppPullPhoneBook(void)
 {
+    pbapStorageClear();
     PBAP_DEBUG(("PBAPC_APP_PULL_PHONE_BOOK, "));
     if(pbapGetActiveLink() != pbapc_invalid_link)
     {
@@ -1025,10 +1063,6 @@ static void handleAppPullPhoneBook(void)
             pParams->maxList   = PBAPC_MAX_LIST;
             pParams->listStart = PBAPC_LIST_START;
             	
-            if(pbapGetCommand() != pbapc_dialling)
-            {
-                pbapSetActivePhonebook(pbap_pb);
-            }
                 
             PbapcPullPhonebookRequest(pbapGetActiveLink(), pbapGetPhoneRepository(), pbapGetActivePhonebook(), pParams);
                 
@@ -1290,16 +1324,17 @@ static bool handlePbapDialData(const uint8 *pVcard, const uint16 vcardLen)
 
 static void handlePbapRetrievedData(const uint8 *pVcard, const uint16 vcardLen)
 {
-    /* Send the retrieved data to UART */
-    if (pVcard && vcardLen > 0)
-    {
-        /* Send the raw vCard data to UART */
-        uart_data_stream_tx_data(pVcard, vcardLen);
-        
-        /* Send a newline to separate records */
-        const uint8 newline[] = "\n";
-        uart_data_stream_tx_data(newline, sizeof(newline) - 1);
-    }
+    pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
+    uint8 activePb = pbapGetActivePhonebook();
+    if (activePb == pbap_och)
+        type = PBAP_TYPE_OCH;
+    else if (activePb == pbap_ich)
+        type = PBAP_TYPE_ICH;
+    else if (activePb == pbap_mch)
+        type = PBAP_TYPE_MCH;
+
+    parseAndStoreVcard(pVcard, vcardLen, type);
+
 }
 
 static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status status, const uint8 *lSource, const uint16 dataLen)
@@ -1333,6 +1368,108 @@ static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status statu
         PBAP_DEBUG(("    Requesting complete.\n"));
 	    /* Send Complete to Server */
         PbapcPullComplete(device_id);
+    }
+}
+
+static void pbapStorageInit(void)
+{
+    g_pbap_storage.count = 0;
+}
+
+static bool pbapStorageAddEntry(const char *name, const char *tel, pbap_entry_type_t type)
+{
+    if (g_pbap_storage.count >= MAX_ENTRIES)
+    {
+        PBAP_DEBUG(("pbapStorageAddEntry: storage full\n"));
+        return FALSE;
+    }
+    pbap_entry_t *entry = &g_pbap_storage.entries[g_pbap_storage.count];
+    memset(entry, 0, sizeof(pbap_entry_t));
+    if (name)
+        strncpy(entry->name, name, MAX_NAME_LEN - 1);
+    if (tel)
+        strncpy(entry->tel, tel, MAX_TEL_LEN - 1);
+    entry->type = type;
+    g_pbap_storage.count++;
+    PBAP_DEBUG(("pbapStorageAddEntry: added entry %d, name:%s, tel:%s\n", g_pbap_storage.count - 1, entry->name, entry->tel));
+    return TRUE;
+}
+
+static void pbapStorageClear(void)
+{
+    g_pbap_storage.count = 0;
+}
+
+static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_type_t type)
+{
+    const uint8 *start = memstr(pVcard, vcardLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
+    const uint8 *end = memstr(pVcard, vcardLen, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
+    const uint8 *pNextStart = pVcard;
+    uint16 remainingLen = vcardLen;
+    
+    while (start && end && start < end)
+    {
+        uint8 *pTel = NULL;
+        uint8 *pName = NULL;
+        uint16 telLen = 0;
+        uint16 nameLen = 0;
+        char telBuf[MAX_TEL_LEN] = {0};
+        char nameBuf[MAX_NAME_LEN] = {0};
+        
+        start = start + strlen(gpbapbegin);
+        
+        telLen = VcardFindMetaData(start, end, &pTel, gpbaptel, (const uint16)strlen(gpbaptel));
+        nameLen = VcardFindMetaData(start, end, &pName, gpbapname, (const uint16)strlen(gpbapname));
+        
+        if (telLen && pTel)
+        {
+            uint16 copyLen = (telLen < MAX_TEL_LEN - 1) ? telLen : MAX_TEL_LEN - 1;
+            memcpy(telBuf, pTel, copyLen);
+            telBuf[copyLen] = '\0';
+        }
+        
+        if (nameLen && pName)
+        {
+            uint16 copyLen = (nameLen < MAX_NAME_LEN - 1) ? nameLen : MAX_NAME_LEN - 1;
+            memcpy(nameBuf, pName, copyLen);
+            nameBuf[copyLen] = '\0';
+            uint8 *p = (uint8 *)nameBuf;
+            while (*p)
+            {
+                if (*p == ';')
+                    *p = ' ';
+                p++;
+            }
+        }
+        
+        if (telLen > 0 || nameLen > 0)
+        {
+            // 1. 存储到结构体
+            pbapStorageAddEntry(nameBuf, telBuf, type);
+            
+            // 2. 立即发送刚存储的条目
+            const char *type_str = NULL;
+            switch (type)
+            {
+                case PBAP_TYPE_PHONEBOOK: type_str = "PHONEBOOK"; break;
+                case PBAP_TYPE_OCH:       type_str = "OCH";       break;
+                case PBAP_TYPE_ICH:       type_str = "ICH";       break;
+                case PBAP_TYPE_MCH:       type_str = "MCH";       break;
+                default:                  type_str = "UNKNOWN";   break;
+            }
+            
+            char line[256];
+            int len = snprintf(line, sizeof(line), "%s %s %s\n", nameBuf, telBuf, type_str);
+            if (len > 0 && len < sizeof(line))
+            {
+                uart_data_stream_tx_data((const uint8*)line, len);
+            }
+        }
+        
+        pNextStart = end + strlen(gpbapend);
+        remainingLen = (uint16)(pVcard + vcardLen - pNextStart);
+        start = memstr(pNextStart, remainingLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
+        end = memstr(pNextStart, remainingLen, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
     }
 }
 
