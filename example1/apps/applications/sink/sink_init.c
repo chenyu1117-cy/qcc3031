@@ -69,6 +69,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include "sink_pbap.h"
 #endif
 
+#include "cq_cmd.h"
 
 #ifdef ENABLE_FAST_PAIR
 #include "sink_fast_pair.h"
@@ -106,6 +107,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #define PS_BDADDR           (0x001)
 #define PS_DEVICE_CLASS     (0x0003)
 #define PS_HFP_POWER_TABLE  (0x360)
+#define PS_LOCAL_NAME       (201)
 
 typedef enum
 {

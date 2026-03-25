@@ -11,6 +11,10 @@
 #include "sink_avrcp.h"
 #include "../../libs/hfp/hfp.h"
 #include "sink_pbap.h"
+#include <ps.h>
+#include "sink_debug.h"
+
+#define PS_LOCAL_NAME       (201)  // 添加这一行
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -363,6 +367,9 @@ void handle_at_command(recv_t *recv)
             {
                 uint16 nameLength = strlen(recv->param);
                 ConnectionChangeLocalName(nameLength, (const uint8*)recv->param);
+                uint16 result = psWrite(PS_LOCAL_NAME, (const void*)recv->param, nameLength + 1);
+                
+                DEBUG(("DEBUG: psWrite result=%d, name=%s, length=%d\n", result, recv->param, nameLength + 1));
                 uart_data_stream_tx_data((const uint8*)"Local name changed\r\n", 19);
             } else {
                 uart_data_stream_tx_data((const uint8*)"ERROR: Missing name parameter\r\n", 33);

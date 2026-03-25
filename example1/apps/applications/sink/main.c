@@ -205,6 +205,8 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
 #define IS_SOURCE_CONNECTED ((!usbIsAttached()) && (!analogAudioConnected()) && \
                              (!spdifAudioConnected()) && (!sinkFmIsFmRxOn()) && (!i2sAudioConnected()))
 
+#define PS_LOCAL_NAME       (201)
+
 /* Pairing timeout action */
 enum
 {
@@ -357,6 +359,21 @@ static void handleCLMessage ( Task task, MessageId id, Message message )
             /* Write EIR data and initialise the codec task */
             sinkWriteEirData((const CL_DM_LOCAL_NAME_COMPLETE_T*)message);
             sinkAccessoryHwInit();
+
+            char stored_name[256];
+            uint32 bytes_read = psRead(PS_LOCAL_NAME, stored_name, sizeof(stored_name));
+            if (bytes_read > 0)
+            {
+                MAIN_DEBUG(("DEBUG: psRead success, bytes=%d, name=%s\n", bytes_read, stored_name));
+                ConnectionChangeLocalName(strlen(stored_name), (const uint8*)stored_name);
+                // 重新写入 EIR 数据以更新名称
+                sinkWriteEirData((const CL_DM_LOCAL_NAME_COMPLETE_T*)message);
+            }
+            else
+            {
+                MAIN_DEBUG(("DEBUG: psRead failed, bytes=%d\n", bytes_read));
+            }
+
 
             sinkSportHealthSMGetLocalAddr();
             break;
