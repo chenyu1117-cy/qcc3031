@@ -94,6 +94,10 @@ depend_Headset_qcc512x_qcc302x/sink_pbap.o: ..\..\sink_pbap.c \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\panic.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\pbapc.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \

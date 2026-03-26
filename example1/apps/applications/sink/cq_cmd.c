@@ -12,7 +12,11 @@
 #include "../../libs/hfp/hfp.h"
 #include "sink_pbap.h"
 #include <ps.h>
+#include "my_ps.h"
 #include "sink_debug.h"
+#include "sink_devicemanager.h"
+#include <bdaddr.h>
+#include "sink_private_data.h"
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
 
@@ -266,7 +270,8 @@ static blink_cmd_t find_cmd_by_str(const char *cmd_str)
 void handle_at_command(recv_t *recv)
 {
     blink_cmd_t cmd = find_cmd_by_str(recv->cmd);
-    if (cmd == BLINK_CMD_NUM) {
+    if (cmd == BLINK_CMD_NUM) 
+    {
         // 未知命令，发送错误响应
         uart_data_stream_tx_data((const uint8*)"ERROR\r\n", 7);
         return;
@@ -315,53 +320,79 @@ void handle_at_command(recv_t *recv)
             uart_data_stream_tx_data((const uint8*)"disconnect\r\n", 12);
             break;
 
-            case BLINK_INQUIRY_PAIR_RECORD:// "MX"
-            //查询配对记录
-            uart_data_stream_tx_data((const uint8*)"Device status displayed\n", 22);
+        case BLINK_INQUIRY_PAIR_RECORD:// "MX"
+        {
+            sink_attributes attributes;
+            typed_bdaddr dev_addr;
+            uint16 pdl_size = 0;
+            uint16 index = 0;
+            char buffer[64];
+            int len;
+            
+            pdl_size = sinkDataGetPDLSize();
+            
+            len = sprintf(buffer, "Total paired devices: %d\r\n", pdl_size);
+            //uart_data_stream_tx_data((const uint8*)buffer, len);
+            
+            for(index = 0; index < pdl_size; index++)
+            {
+                if(deviceManagerGetIndexedAttributes(index, &attributes, &dev_addr))
+                {
+                    len = sprintf(buffer, "Device %d: %04X:%02X:%06lX, Profiles: 0x%02X\r\n", 
+                            index,
+                            dev_addr.addr.nap,
+                            dev_addr.addr.uap,
+                            dev_addr.addr.lap,
+                            attributes.profiles);
+                    uart_data_stream_tx_data((const uint8*)buffer, len);
+                }
+            }
+            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
             break;
+        }
 
-            case BLINK_INQUIRY_CUR_BT_INFO:// "QI"
+        case BLINK_INQUIRY_CUR_BT_INFO:// "QI"
             //查询当前连接设备信息
             uart_data_stream_tx_data((const uint8*)"Connection status displayed\n", 26);
             break;
 
-            case BLINK_PLAY_PAUSE_MUSIC:  // "MA"        
+        case BLINK_PLAY_PAUSE_MUSIC:  // "MA"        
             //播放/暂停音乐:::MA
             sinkAvrcpPlayPause();
             uart_data_stream_tx_data((const uint8*)"Play/Pause music command sent\n", 28);
             break;
     
-            case BLINK_NEXT_SOUND:   // "MD"
+        case BLINK_NEXT_SOUND:   // "MD"
             //下一曲:::MD
             sinkAvrcpSkipForward();
             uart_data_stream_tx_data((const uint8*)"Next track command sent\n", 26);
             break;
 
-            case BLINK_PREV_SOUND:    //"ME"              
+        case BLINK_PREV_SOUND:    //"ME"              
             //上一曲:::ME
             sinkAvrcpSkipBackward();
             uart_data_stream_tx_data((const uint8*)"Previous track command sent\n", 30);
             break;
 
-            case BLINK_FAST_FORWARD:   // "MR"              
+        case BLINK_FAST_FORWARD:   // "MR"              
             //快进:::MR
             sinkAvrcpFastForwardPress();
             uart_data_stream_tx_data((const uint8*)"Fast forward command sent\n", 27);
             break;
 
-            case BLINK_FAST_BACK:   // "MT"              
+        case BLINK_FAST_BACK:   // "MT"              
             //快退:::MT
             sinkAvrcpRewindPress();
             uart_data_stream_tx_data((const uint8*)"Fast rewind command sent\n", 28);
             break;
 
-            case BLINK_INQUIRY_MUSIC_INFO:   // "MK"              
+        case BLINK_INQUIRY_MUSIC_INFO:   // "MK"              
             //查询Music信息
             sinkAvrcpRetrieveNowPlayingRequest(0, 0, TRUE);
             uart_data_stream_tx_data((const uint8*)"Music info query sent\n", 23);
             break;
             
-            case BLINK_MODIFY_LOCAL_NAME:   // "MM[name]"
+        case BLINK_MODIFY_LOCAL_NAME:   // "MM[name]"
             //更改LOCAL Name
             if (recv->param && strlen(recv->param) > 0)
             {
@@ -371,17 +402,19 @@ void handle_at_command(recv_t *recv)
                 
                 DEBUG(("DEBUG: psWrite result=%d, name=%s, length=%d\n", result, recv->param, nameLength + 1));
                 uart_data_stream_tx_data((const uint8*)"Local name changed\r\n", 19);
-            } else {
+            } 
+            else 
+            {
                 uart_data_stream_tx_data((const uint8*)"ERROR: Missing name parameter\r\n", 33);
             }
             break;
 
-            case BLINK_ACCEPT_INCOMING:   // "CE"
+        case BLINK_ACCEPT_INCOMING:   // "CE"
             //接听来电
             HfpCallAnswerRequest(hfp_primary_link, 1);
             break;
 
-            case BLINK_REJECT_INCOMMMING:   // "CF"
+        case BLINK_REJECT_INCOMMMING:   // "CF"
             //拒接来电
             HfpCallAnswerRequest(hfp_primary_link, 0);
             break;
@@ -391,76 +424,76 @@ void handle_at_command(recv_t *recv)
             HfpCallTerminateRequest(hfp_primary_link);
             break;
 
-            case BLINK_REDIAL:    // "CH"
+        case BLINK_REDIAL:    // "CH"
             //重拨 
             break;
 
-            case BLINK_VOICE_DIAL:    // "CI"
+        case BLINK_VOICE_DIAL:    // "CI"
             //语音拨号
             break;
 
-            case BLINK_CANCEL_VOICE_DIAL:    // "CJ"
+        case BLINK_CANCEL_VOICE_DIAL:    // "CJ"
             //取消语音拨号
             break;
 
-            case BLINK_VOLUME_UP:    // "CK"
+        case BLINK_VOLUME_UP:    // "CK"
             //音量调节:::CK -- Music +
             break;
 
-            case BLINK_VOLUME_DOWN:    // "CL"
+        case BLINK_VOLUME_DOWN:    // "CL"
             //音量调节:::CL -- Music -
             break;
 
-            case BLINK_MIC_OPEN_CLOSE:    // "CM"
+        case BLINK_MIC_OPEN_CLOSE:    // "CM"
             //麦克风打开/关闭
             break;
 
-            case BLINK_VOICE_TO_PHONE:    // "CN"
+        case BLINK_VOICE_TO_PHONE:    // "CN"
             //语音切换到手机
             HfpAudioTransferRequest(hfp_primary_link, hfp_audio_to_ag, sync_all_sco, NULL);
             break;
 
-            case BLINK_VOICE_TO_BLUE:    // "CP"
+        case BLINK_VOICE_TO_BLUE:    // "CP"
             //语音切换到蓝牙
             HfpAudioTransferRequest(hfp_primary_link, hfp_audio_to_hfp, sync_all_sco, NULL);
 
             break;
 
-            case BLINK_VOICE_TRANSFER:    // "CO"
+        case BLINK_VOICE_TRANSFER:    // "CO"
             //语音在蓝牙和手机之间切换
             HfpAudioTransferRequest(hfp_primary_link, hfp_audio_transfer, sync_all_sco, NULL);
             break;
 
-            case BLINK_HANG_UP_WAIT_PHONE:    // "CQ"
+        case BLINK_HANG_UP_WAIT_PHONE:    // "CQ"
             //挂断等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_held_reject_waiting, 0);
             break;
 
-            case BLINK_HANG_UP_CURRENT_ACCEPT_WAIT:    // "CR"
+        case BLINK_HANG_UP_CURRENT_ACCEPT_WAIT:    // "CR"
             //挂断当前通话,接听等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_active_accept_other, 0);
             break;
 
-            case BLINK_HOLD_CURRENT_ACCEPT_WAIT:    // "CS"
+        case BLINK_HOLD_CURRENT_ACCEPT_WAIT:    // "CS"
             //保持当前通话接听等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_hold_active_accept_other, 0);
             break;
 
-            case BLINK_MEETING_PHONE:    // "CT"
+        case BLINK_MEETING_PHONE:    // "CT"
             //会议电话
             break;
 
-            case BLINK_INQUIRY_HFP_STATUS:    // "CY"
+        case BLINK_INQUIRY_HFP_STATUS:    // "CY"
             //查询HFP状态
             HfpCurrentCallsRequest(hfp_primary_link);
             break;
 
-            case BLINK_DTMF:    // "CX"
+        case BLINK_DTMF:    // "CX"
             //拨打分机号:::CX[DTMF:1]
             HfpDtmfRequest(hfp_primary_link, recv->param[0]);
             break;
 
-            case BLINK_SET_PHONE_PHONE_BOOK:    // "PA"
+        case BLINK_SET_PHONE_PHONE_BOOK:    // "PA"
             //读取手机电话本
             if (pbapConnect(hfp_primary_link)) 
             { 
@@ -473,7 +506,7 @@ void handle_at_command(recv_t *recv)
 
             break;
 
-            case BLINK_SET_OUT_GOING_CALLLOG:    // "PH"
+        case BLINK_SET_OUT_GOING_CALLLOG:    // "PH"
             //读取已拨通话记录
             if (pbapConnect(hfp_primary_link)) 
             { 
@@ -485,7 +518,7 @@ void handle_at_command(recv_t *recv)
             }
             break;
 
-            case BLINK_SET_INCOMING_CALLLOG:    // "PI"
+        case BLINK_SET_INCOMING_CALLLOG:    // "PI"
             //读取已接通话记录
             if (pbapConnect(hfp_primary_link)) 
             { 
@@ -497,7 +530,7 @@ void handle_at_command(recv_t *recv)
             }
             break;
 
-            case BLINK_SET_MISSED_CALLLOG:    // "PJ"
+        case BLINK_SET_MISSED_CALLLOG:    // "PJ"
             //读取未接通话记录
             if (pbapConnect(hfp_primary_link)) 
             { 

@@ -1,0 +1,281 @@
+================================
+PROJECT INFO 
+================================
+  project_file = C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\cur_cfg_filesystem.x2p
+   devkit_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+ configuration = filesystem
+-PROJECT PROPERTIES-
+  IDE_PROJECT:cur_cfg_filesystem
+  OUTDIR     :C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA
+
+SOURCE FILES
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys0_config4.hcf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys0_config2.htf
+
+CONFIG NAME = filesystem
+PROPS
+defaultdict(<type 'str'>, {'DEFS': '', 'LIBPATHS': '', 'DBG_CORE': '', 'permission': '', 'INCPATHS': '', 'description': '', 'system_label': 'QCC512X_CONFIG', 'argument': '', 'default': '', 'STRIP_SYMBOLS': '', 'OUTPUT_TYPE': '', 'LIBS': '', 'OUTPUT': '', 'FS_ROOT': '', 'TYPE': 'curator_config', 'BUILD_TYPE': '', 'PRESERVED_LIBS': ''})
+------------------------------------
+DEVKIT INFO 
+------------------------------------
+  Param -d =  C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+  Script =  C:/qtil/ADK_QCC512X_QCC302X_WIN_6.4.2.26/tools/ubuild/ubuild.py
+  XML FILE = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\merge_ubuild.chk
+-KITIDENT-
+  compatibility_list:['{34E71291-920E-4fe0-8871-5F119C8D0E40}']
+  uuid              :{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  checksum          :4f7d43da67eab9fee1b3281d4115cc6b
+  URI               :kitres://{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  build_time        :1576071077.869456
+  filter            :qcc3400;qcc512*;qcc302*;qcc303*
+  version           :6.4.2
+  build             :26
+  dependencies      :
+            
+  fsprefix          :qcc512x_qcc302x
+  devkit_group      :{BBAC163C-41BE-4ce7-B236-236F15FF18CA}
+  target            :x86
+-TOP LEVEL ELEMENTS-
+  info          :True
+  commands      :True
+  toolchain     :True
+  ext_id        :True
+  doc           :True
+  ext_info      :True
+  locks         :True
+  plugins       :True
+  id            :True
+  configurations:True
+    -COMMANDS-
+      coredumpWithAppsSqif:{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems including apps sqif'}
+      eraseApps           :{'run': './tools/python27/python.exe', 'description': 'Run pydbg to erase the apps area'}
+      config_tool         :{'run': './tools/bin/ADKConfigTool.exe', 'description': 'Run the config tool'}
+      setMemoryOption     :{'run': './tools/python27/python.exe', 'description': 'Setup Memory Module Type to support'}
+      scramble_aspk       :{'run': './tools/python27/python.exe', 'description': 'Scramble ASPK'}
+      deploy              :{'run': './tools/python27/python.exe', 'description': 'Deploys an ADK Project binary to a device'}
+      make                :{'run': 'bin/make.exe', 'description': 'GNU Make'}
+      coredump            :{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems'}
+      versions_workspace  :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various workspace files'}
+      privateLibExport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+      buildDFU            :{'run': './tools/python27/python.exe', 'description': 'Collect or build input files and create DFU file'}
+      build               :{'run': './tools/python27/python.exe', 'description': 'Builds an ADK Project'}
+      clean               :{'run': './tools/python27/python.exe', 'description': 'Clean an ADK Project'}
+      pydbgCoredump       :{'run': './tools/python27/python.exe', 'description': 'Run pydbg on a coredump'}
+      dfu_setup           :{'run': './tools/python27/python.exe', 'description': 'Setup DFU security'}
+      buildFlashImage     :{'run': './tools/python27/python.exe', 'description': 'Generate a single flash image file'}
+      versions_devkit     :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various devkit files'}
+      privateLibImport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+====================
+-TOOLS-
+  system:{'device': 'plugins/debugger/device_control_hydra.dll', 'core_groups': {'app': {'p1': 'plugins/debugger/core_debug_kalimba.dll'}, 'audio': {'p0': 'plugins/debugger/core_debug_kalimba.dll', 'p1': 'plugins/debugger/core_debug_kalimba.dll'}}}
+SDB File: C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb
+tool_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys0_config2.htf c:\users\cqbt\appdata\local\temp\tmp9vq04n -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+3 words used to enforce data alignment.
+Copying C:\Users\CQBT\Desktop\test\example1\images\curator_firmware\common\config\subsys0_config1.hcf
+Copying C:\Users\CQBT\Desktop\test\example1\images\curator_firmware\common\patches\subsys0_patch0_fw00000503.hcf
+Copying C:\Users\CQBT\Desktop\test\example1\images\curator_firmware\common\patches\subsys6_patch0_fw00000503.hcf
+Packing directory...
+Translating filesystem image by 0x000000
+================================
+PROJECT INFO 
+================================
+  project_file = C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\fw_cfg_filesystem.x2p
+   devkit_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+ configuration = filesystem
+-PROJECT PROPERTIES-
+  IDE_PROJECT:fw_cfg_filesystem
+  OUTDIR     :C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA
+
+SOURCE FILES
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys1_config1.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys3_config1.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys7_config1.hcf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys7_config3.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys3_config2.htf
+
+CONFIG NAME = filesystem
+PROPS
+defaultdict(<type 'str'>, {'DEFS': '', 'LIBPATHS': '', 'DBG_CORE': '', 'permission': '', 'INCPATHS': '', 'description': '', 'system_label': 'QCC512X_CONFIG', 'argument': '', 'default': '', 'STRIP_SYMBOLS': '', 'OUTPUT_TYPE': '', 'LIBS': '', 'OUTPUT': '', 'FS_ROOT': '', 'TYPE': 'firmware_config', 'BUILD_TYPE': '', 'PRESERVED_LIBS': ''})
+------------------------------------
+DEVKIT INFO 
+------------------------------------
+  Param -d =  C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+  Script =  C:/qtil/ADK_QCC512X_QCC302X_WIN_6.4.2.26/tools/ubuild/ubuild.py
+  XML FILE = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\merge_ubuild.chk
+-KITIDENT-
+  compatibility_list:['{34E71291-920E-4fe0-8871-5F119C8D0E40}']
+  uuid              :{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  checksum          :4f7d43da67eab9fee1b3281d4115cc6b
+  URI               :kitres://{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  build_time        :1576071077.869456
+  filter            :qcc3400;qcc512*;qcc302*;qcc303*
+  version           :6.4.2
+  build             :26
+  dependencies      :
+            
+  fsprefix          :qcc512x_qcc302x
+  devkit_group      :{BBAC163C-41BE-4ce7-B236-236F15FF18CA}
+  target            :x86
+-TOP LEVEL ELEMENTS-
+  info          :True
+  commands      :True
+  toolchain     :True
+  ext_id        :True
+  doc           :True
+  ext_info      :True
+  locks         :True
+  plugins       :True
+  id            :True
+  configurations:True
+    -COMMANDS-
+      coredumpWithAppsSqif:{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems including apps sqif'}
+      eraseApps           :{'run': './tools/python27/python.exe', 'description': 'Run pydbg to erase the apps area'}
+      config_tool         :{'run': './tools/bin/ADKConfigTool.exe', 'description': 'Run the config tool'}
+      setMemoryOption     :{'run': './tools/python27/python.exe', 'description': 'Setup Memory Module Type to support'}
+      scramble_aspk       :{'run': './tools/python27/python.exe', 'description': 'Scramble ASPK'}
+      deploy              :{'run': './tools/python27/python.exe', 'description': 'Deploys an ADK Project binary to a device'}
+      make                :{'run': 'bin/make.exe', 'description': 'GNU Make'}
+      coredump            :{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems'}
+      versions_workspace  :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various workspace files'}
+      privateLibExport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+      buildDFU            :{'run': './tools/python27/python.exe', 'description': 'Collect or build input files and create DFU file'}
+      build               :{'run': './tools/python27/python.exe', 'description': 'Builds an ADK Project'}
+      clean               :{'run': './tools/python27/python.exe', 'description': 'Clean an ADK Project'}
+      pydbgCoredump       :{'run': './tools/python27/python.exe', 'description': 'Run pydbg on a coredump'}
+      dfu_setup           :{'run': './tools/python27/python.exe', 'description': 'Setup DFU security'}
+      buildFlashImage     :{'run': './tools/python27/python.exe', 'description': 'Generate a single flash image file'}
+      versions_devkit     :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various devkit files'}
+      privateLibImport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+====================
+-TOOLS-
+  system:{'device': 'plugins/debugger/device_control_hydra.dll', 'core_groups': {'app': {'p1': 'plugins/debugger/core_debug_kalimba.dll'}, 'audio': {'p0': 'plugins/debugger/core_debug_kalimba.dll', 'p1': 'plugins/debugger/core_debug_kalimba.dll'}}}
+SDB File: C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb
+tool_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys1_config1.htf c:\users\cqbt\appdata\local\temp\tmp6h3lms -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys3_config1.htf c:\users\cqbt\appdata\local\temp\tmp6h3lms -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys7_config3.htf c:\users\cqbt\appdata\local\temp\tmp6h3lms -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys3_config2.htf c:\users\cqbt\appdata\local\temp\tmp6h3lms -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+4 words used to enforce data alignment.
+Copying patch: C:\Users\CQBT\Desktop\test\example1\audio\kalimba_ROM_4786\kymera\output\stre_rom_v02_release\build\patchbin\subsys3_patch0_fw000012B2.hcf
+No EXTCONST_PATH property in project: Assuming no audio constants required
+Copying C:\Users\CQBT\Desktop\test\example1\images\btss_firmware\qfn80\patches\subsys1_patch0_fw000033EF.hcf to c:\users\cqbt\appdata\local\temp\tmp6h3lms\subsys1_patch0_fw000033EF.hcf and removing wildcard
+Packing directory...
+Translating filesystem image by 0x000000
+  Header block starting at 0x00000000, 12 bytes
+  Entry metadata block starting at 0x0000000c, 96 bytes
+  Names block starting at 0x0000006c, 168 bytes
+  File data block starting at 0x00000114, 69684 bytes
+  Footer block starting at 0x00011148, 24 bytes
+================================
+PROJECT INFO 
+================================
+  project_file = C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\dev_cfg_filesystem.x2p
+   devkit_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+ configuration = filesystem
+-PROJECT PROPERTIES-
+  IDE_PROJECT:dev_cfg_filesystem
+  OUTDIR     :C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA
+
+SOURCE FILES
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys7_config2.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys0_config3.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys1_config2.htf
+C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\user_selected_specific_memory_type.htf
+
+CONFIG NAME = filesystem
+PROPS
+defaultdict(<type 'str'>, {'DEFS': '', 'LIBPATHS': '', 'DBG_CORE': '', 'permission': '', 'INCPATHS': '', 'description': '', 'system_label': 'QCC512X_CONFIG', 'argument': '', 'default': '', 'STRIP_SYMBOLS': '', 'OUTPUT_TYPE': '', 'LIBS': '', 'OUTPUT': '', 'FS_ROOT': '', 'TYPE': 'device_config', 'BUILD_TYPE': '', 'PRESERVED_LIBS': ''})
+------------------------------------
+DEVKIT INFO 
+------------------------------------
+  Param -d =  C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+  Script =  C:/qtil/ADK_QCC512X_QCC302X_WIN_6.4.2.26/tools/ubuild/ubuild.py
+  XML FILE = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\merge_ubuild.chk
+-KITIDENT-
+  compatibility_list:['{34E71291-920E-4fe0-8871-5F119C8D0E40}']
+  uuid              :{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  checksum          :4f7d43da67eab9fee1b3281d4115cc6b
+  URI               :kitres://{8c4e77ed-c5b5-4e4b-a9b2-3c8086459e75}
+  build_time        :1576071077.869456
+  filter            :qcc3400;qcc512*;qcc302*;qcc303*
+  version           :6.4.2
+  build             :26
+  dependencies      :
+            
+  fsprefix          :qcc512x_qcc302x
+  devkit_group      :{BBAC163C-41BE-4ce7-B236-236F15FF18CA}
+  target            :x86
+-TOP LEVEL ELEMENTS-
+  info          :True
+  commands      :True
+  toolchain     :True
+  ext_id        :True
+  doc           :True
+  ext_info      :True
+  locks         :True
+  plugins       :True
+  id            :True
+  configurations:True
+    -COMMANDS-
+      coredumpWithAppsSqif:{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems including apps sqif'}
+      eraseApps           :{'run': './tools/python27/python.exe', 'description': 'Run pydbg to erase the apps area'}
+      config_tool         :{'run': './tools/bin/ADKConfigTool.exe', 'description': 'Run the config tool'}
+      setMemoryOption     :{'run': './tools/python27/python.exe', 'description': 'Setup Memory Module Type to support'}
+      scramble_aspk       :{'run': './tools/python27/python.exe', 'description': 'Scramble ASPK'}
+      deploy              :{'run': './tools/python27/python.exe', 'description': 'Deploys an ADK Project binary to a device'}
+      make                :{'run': 'bin/make.exe', 'description': 'GNU Make'}
+      coredump            :{'run': './tools/python27/python.exe', 'description': 'Coredump all sub-systems'}
+      versions_workspace  :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various workspace files'}
+      privateLibExport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+      buildDFU            :{'run': './tools/python27/python.exe', 'description': 'Collect or build input files and create DFU file'}
+      build               :{'run': './tools/python27/python.exe', 'description': 'Builds an ADK Project'}
+      clean               :{'run': './tools/python27/python.exe', 'description': 'Clean an ADK Project'}
+      pydbgCoredump       :{'run': './tools/python27/python.exe', 'description': 'Run pydbg on a coredump'}
+      dfu_setup           :{'run': './tools/python27/python.exe', 'description': 'Setup DFU security'}
+      buildFlashImage     :{'run': './tools/python27/python.exe', 'description': 'Generate a single flash image file'}
+      versions_devkit     :{'run': './tools/python27/python.exe', 'description': 'Discover versions of various devkit files'}
+      privateLibImport    :{'run': './tools/python27/python.exe', 'description': 'Import a private private library into a project'}
+====================
+-TOOLS-
+  system:{'device': 'plugins/debugger/device_control_hydra.dll', 'core_groups': {'app': {'p1': 'plugins/debugger/core_debug_kalimba.dll'}, 'audio': {'p0': 'plugins/debugger/core_debug_kalimba.dll', 'p1': 'plugins/debugger/core_debug_kalimba.dll'}}}
+SDB File: C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb
+tool_root = C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\QCC3031-AA_DEV-BRD-R2-AA\subsys7_config2.htf c:\users\cqbt\appdata\local\temp\tmpghs1fb -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+
+>>> [C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\bin\ConfigCmd.exe -noprefix binary C:\Users\CQBT\Desktop\test\example1\apps\applications\sink\qcc512x_qcc302x\common\subsys0_config3.htf c:\users\cqbt\appdata\local\temp\tmpghs1fb -system QCC512X_CONFIG -quiet -database C:\qtil\ADK_QCC512X_QCC302X_WIN_6.4.2.26\tools\config\hydracore_config.sdb]
+Success
+
+
+
+

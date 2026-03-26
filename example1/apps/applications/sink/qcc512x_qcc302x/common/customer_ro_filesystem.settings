@@ -1,4 +1,8 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
-    <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/filesystem/default"/>
+    <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/filesystem/default">
+        <item name="Default">
+            <item name="deploy">device://tc/usb2tc/100/qcc3031</item>
+        </item>
+    </group>
 </settings>

@@ -185,6 +185,7 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
 #include <display_plugin_if.h>
 
 #include "my_uart.h"
+#include "my_ps.h"
 
 #ifdef DEBUG_MAIN
     #define MAIN_DEBUG(x) DEBUG(x)

@@ -2,6 +2,9 @@
 <settings>
     <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/Activity_Monitoring_Headset/default"/>
     <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/Headset/default">
+        <item name="Default">
+            <item name="deploy">device://tc/usb2tc/100/qcc3031</item>
+        </item>
         <item name="breakpoints">
             <item name="number">0</item>
         </item>

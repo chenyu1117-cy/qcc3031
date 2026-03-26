@@ -298,5 +298,9 @@ depend_Headset_qcc512x_qcc302x/sink_avrcp.o: ..\..\sink_avrcp.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\vm.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\vmal.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\transform.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
 
