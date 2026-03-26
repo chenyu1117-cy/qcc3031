@@ -321,6 +321,7 @@ void handle_at_command(recv_t *recv)
             break;
 
         case BLINK_INQUIRY_PAIR_RECORD:// "MX"
+            //查询配对记录
         {
             sink_attributes attributes;
             typed_bdaddr dev_addr;
@@ -481,6 +482,7 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_MEETING_PHONE:    // "CT"
             //会议电话
+            HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_add_held_to_multiparty, 0);
             break;
 
         case BLINK_INQUIRY_HFP_STATUS:    // "CY"

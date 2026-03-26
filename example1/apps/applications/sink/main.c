@@ -975,8 +975,6 @@ RETURNS
 */
 static void handleDeviceAndAudioRoutingInfoEvents(const MessageId id)
 {
-    /*Just print event here fir debug purpose so that we know which event
-      is being fed to IndicateEvent() after switch statement */
     MAIN_DEBUG_L1(("Main : handleDeviceAndAudioRoutingInfoEvents() - Event %x\n",id));
     switch(id)
     {
@@ -984,40 +982,34 @@ static void handleDeviceAndAudioRoutingInfoEvents(const MessageId id)
             handleEventSysUpdateDevicesConnectedStatus();
         break;
 
-        /* at least one AG or no AG is connected to the device */
+        /* 连接成功 - UART发送 */
+        case EventSysPrimaryDeviceConnected:
+        case EventSysSecondaryDeviceConnected:
         case EventSysAgSourceConnected:
+            uart_data_stream_tx_data((const uint8 *)"connected\r\n", 9);
+        break;
+
+        /* 断开连接 - UART发送 */
+        case EventSysPrimaryDeviceDisconnected:
+        case EventSysSecondaryDeviceDisconnected:
         case EventSysAllAgSourcesDisconnected:
+            uart_data_stream_tx_data((const uint8 *)"disconnected\r\n", 12);
+        break;
+
+        /* 配对成功 - UART发送 */
+        case EventSysPairingSuccessful:
+            uart_data_stream_tx_data((const uint8 *)"paired\r\n", 9);
         break;
 
 #ifdef ENABLE_PEER
-        /* at least one Peer is connected to the device */
         case EventSysPeerConnected:
             MAIN_DEBUG(( "HS : EventSysPeerConnected\n" ));
             break;
 
-        /* no Peers are connected to the device */
         case EventSysPeerDisconnected:
             MAIN_DEBUG(( "HS : EventSysPeerDisconnected\n" ));
             peerSendAudioRoutingInformationToUser();
         break;
-
-        /* Below events are generated when TWS audio routing is updated and this device
-            becomes the corresponding channel(as per event) of a stereo TWS setup */
-        case EventSysPeerAudioRoutingStereo:
-        case EventSysPeerAudioRoutingLeft:
-        case EventSysPeerAudioRoutingRight:
-        case EventSysPeerAudioRoutingDownmix:
-            break;
-
-        /* at least one AG or no AG is connected to the Peer device */
-        case EventSysPeerAgSourceConnected:
-        case EventSysPeerAllAgSourcesDisconnected:
-            break;
-
-        case EventSysEnableAudioActive:
-            MAIN_DEBUG(( "HS : EventSysEnableAudioActive( PIO_AUDIO_ACTIVE, %d )\n", (int)sinkAudioIsAudioRouted() ));
-            audioUpdateAudioActivePio();
-            break;
 #endif
     }
 }
