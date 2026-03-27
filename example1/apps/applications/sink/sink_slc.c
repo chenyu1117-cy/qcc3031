@@ -41,6 +41,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include "sink_hid.h"
 #include "sink_auto_power_off.h"
 #include "sink_bredr.h"
+#include "my_uart.h"
 
 #ifdef ENABLE_PBAP
 #include "sink_pbap.h"
@@ -384,10 +385,21 @@ RETURNS
 */
 static void slcConnectionComplete(hfp_link_priority priority, Sink sink, const bdaddr* bd_addr)
 {
-    UNUSED(bd_addr);    /* Not used, but is in the in message triggering this */
+    //UNUSED(bd_addr);    /* Not used, but is in the in message triggering this */
 
     /* mark as connected */
     sinkHfpDataSetProfileConnectedStatus(hfp_connected,PROFILE_INDEX(priority));
+
+    
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "XXIB%02X%02X%02X%02X%02X%02X\r\n", 
+            (bd_addr->nap >> 8) & 0xFF, 
+            bd_addr->nap & 0xFF, 
+            bd_addr->uap, 
+            (bd_addr->lap >> 16) & 0xFF, 
+            (bd_addr->lap >> 8) & 0xFF, 
+            bd_addr->lap & 0xFF); 
+    uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
 
     /* Another connection made, update number of current connections */
     SLC_DEBUG(("SLC: Pro Connected[%x], NoOfDev=%x\n", (int)sink,deviceManagerNumConnectedDevs())) ;
@@ -1026,7 +1038,7 @@ void slcConnectDevice(bdaddr* bd_addr, sink_link_type profiles)
                the device connects and notifies there is no network */
             sinkHfpDataSetNetworkPresent(TRUE);
             
-            SLC_DEBUG(("SLC: Connecting HFP\n")) ;            
+            SLC_DEBUG(("SLC: Connecting HFP\n")) ;
             slcHfpConnectRequest(bd_addr);
         }
         else if(sinkA2dpEnabled() && (profiles & sink_a2dp))

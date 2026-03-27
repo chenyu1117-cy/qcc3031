@@ -4926,7 +4926,7 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
    // uint8 i;
 
     // 转换地址为字符串格式
-    sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X",
+    sprintf(addr_str, "%02X%02X%02X%02X%02X%02X",
             message->bd_addr.nap >> 8, message->bd_addr.nap & 0xFF,
             message->bd_addr.uap,
             (message->bd_addr.lap >> 16) & 0xFF,
@@ -4950,7 +4950,7 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
     // 通过 UART 输出设备信息和名称
     char output[128];
     int out_len = snprintf(output, sizeof(output),
-                           "Device found: %s, Name: %s\n",
+                           "XXSF0%s%s\n",
                            addr_str, name_buf);
     if (out_len > 0 && out_len < sizeof(output))
     {

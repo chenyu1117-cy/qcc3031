@@ -281,8 +281,8 @@ void handle_at_command(recv_t *recv)
     switch (cmd) {
         case BLINK_START_DISCOVERY:// "SD"
             // 执行查询操作
-            inquiryStart(0); 
-            uart_data_stream_tx_data((const uint8*)"inquiry_start\r\n", 15);
+            uart_data_stream_tx_data((const uint8*)"XXQS\r\n", 6);
+            inquiryStart(0);
             break;
 
         case BLINK_STOP_DISCOVERY:  // "ST"
@@ -300,8 +300,11 @@ void handle_at_command(recv_t *recv)
             bdaddr addr;
             if (strToBdaddr(recv->param, &addr))
             {
+                char buffer[32];
+                snprintf(buffer, sizeof(buffer), "XXIV%s\r\n",recv->param);
+                uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+                uart_data_stream_tx_data((const uint8*)"XXP1\r\n", 6);
                 slcConnectDevice(&addr,sink_hfp | sink_a2dp | sink_avrcp);
-                uart_data_stream_tx_data((const uint8*)"connect...\r\n", 12);
             }
             else
             {
