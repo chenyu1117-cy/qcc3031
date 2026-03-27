@@ -714,6 +714,7 @@ typedef enum sinkEventsTag
 /*0x480A*/    EventSysFastPairDiscoverabilityTimeout,
 
 /*0x480B*/    EventSysVAStopVoiceCapture,
+/*0x480C*/    EventSysSendAtCk01,
               EventSysLast
 
 } sinkEvents_t; 

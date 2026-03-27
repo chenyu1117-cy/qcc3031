@@ -273,7 +273,7 @@ void handle_at_command(recv_t *recv)
     if (cmd == BLINK_CMD_NUM) 
     {
         // 未知命令，发送错误响应
-        uart_data_stream_tx_data((const uint8*)"ERROR\r\n", 7);
+        DEBUG(("unknow-cmd\r\n\r\n"));
         return;
     }
 
@@ -406,7 +406,7 @@ void handle_at_command(recv_t *recv)
             } 
             else 
             {
-                uart_data_stream_tx_data((const uint8*)"ERROR: Missing name parameter\r\n", 33);
+                DEBUG(("ERROR: Missing name parameter\r\n"));
             }
             break;
 
@@ -548,7 +548,6 @@ void handle_at_command(recv_t *recv)
             // ... 添加其他命令处理
         default:
             // 对于没有具体实现的命令，返回OK或ERROR
-            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
             break;
     }
 }

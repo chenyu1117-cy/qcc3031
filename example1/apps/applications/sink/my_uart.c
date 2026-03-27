@@ -9,6 +9,7 @@
 #include "sink_debug.h"
 #include "my_uart.h"
 #include "cq_cmd.h"  // 包含AT命令头文件
+#include "sink_events.h"
 
 #ifdef DEBUG_UART
 #define UART_DEBUG(x)               DEBUG(x)
@@ -40,7 +41,7 @@ static void parse_and_handle_line(const char *line, uint16 len)
     if (len == 0) return;
 
     // 检查是否以 "AT+" 开头（可选）
-    if (len >= 3 && strncmp(p, "AT+", 3) == 0) {
+    if (len >= 3 && strncmp(p, "AT", 2) == 0) {
         p += 3;
         len -= 3;
     }
@@ -78,6 +79,13 @@ void uart_device_init(void)
 {
     uart_pios_init();
     uart_data_stream_init();
+    
+    // 初始化标志位
+    theUARTStreamTask.at_ck01_sending = TRUE;
+    
+    // 启动定时器，1秒后发送第一次
+    MessageSendLater(&theUARTStreamTask.task, EventSysSendAtCk01, 0, 1000);
+    
     UART_DEBUG(("uart_device_init\n"));
 }
 
@@ -119,7 +127,7 @@ void uart_data_stream_init(void)
     theUARTStreamTask.task.handler = UARTStreamMessageHandler;
 
     /* Configure uart settings */
-    StreamUartConfigure(VM_UART_RATE_115K2, VM_UART_STOP_ONE, VM_UART_PARITY_NONE);
+    StreamUartConfigure(2048, VM_UART_STOP_ONE, VM_UART_PARITY_NONE);
 
     /* Get the sink for the uart */
     theUARTStreamTask.uart_sink = StreamUartSink();
@@ -159,26 +167,48 @@ void uart_data_stream_rx_data(Source src)
     uint16 length;
     const uint8 *data;
 
-    while ((length = SourceBoundary(src)) > 0) {
+    while ((length = SourceBoundary(src)) > 0) 
+    {
         data = SourceMap(src);
         PanicNull((void*)data);
 
         // 将数据追加到行缓冲区
         uint16 i;
-        for (i = 0; i < length; i++) {
+        for (i = 0; i < length; i++) 
+        {
             char ch = data[i];
-            if (ch == '\n' || ch == '\r') {
+            if (ch == '\n' || ch == '\r') 
+            {
                 // 遇到换行符，解析当前行
-                if (theUARTStreamTask.line_len > 0) {
+                if (theUARTStreamTask.line_len > 0) 
+                {
                     theUARTStreamTask.line[theUARTStreamTask.line_len] = '\0';
+
+                    // 检查是否收到AT-KC开头的回应
+                    if (theUARTStreamTask.line_len >= 5 && 
+                        strncmp(theUARTStreamTask.line, "AT-KC", 5) == 0)
+                    {
+                        // 收到回应，停止发送AT+CK01
+                        theUARTStreamTask.at_ck01_sending = FALSE;
+                        MessageCancelAll(&theUARTStreamTask.task, EventSysSendAtCk01);
+                        uart_data_stream_tx_data((const uint8*)"XXIS\r\n", 7);
+                    }
+
+                    uart_data_stream_tx_data((const uint8*)"AT+ACK\r\n", 9);
+
                     parse_and_handle_line(theUARTStreamTask.line, theUARTStreamTask.line_len);
                     theUARTStreamTask.line_len = 0;
                 }
-            } else {
+            } 
+            else 
+            {
                 // 普通字符，存入缓冲区（防止溢出）
-                if (theUARTStreamTask.line_len < RX_LINE_BUFFER_SIZE - 1) {
+                if (theUARTStreamTask.line_len < RX_LINE_BUFFER_SIZE - 1) 
+                {
                     theUARTStreamTask.line[theUARTStreamTask.line_len++] = ch;
-                } else {
+                } 
+                else 
+                {
                     // 缓冲区满，丢弃该行（或可复位）
                     theUARTStreamTask.line_len = 0;
                 }
@@ -198,6 +228,16 @@ void UARTStreamMessageHandler (Task pTask, MessageId pId, Message pMessage)
         case MESSAGE_MORE_DATA:
         uart_data_stream_rx_data(((MessageMoreData *)pMessage)->source);
         break;
+        
+        case EventSysSendAtCk01:
+        if (theUARTStreamTask.at_ck01_sending)
+        {
+            uart_data_stream_tx_data((const uint8*)"AT+CK01\r\n", 9);
+            // 再次设置1秒后发送
+            MessageSendLater(&theUARTStreamTask.task, EventSysSendAtCk01, 0, D_SEC(1));
+        }
+        break;
+        
         default:
         break;
     }

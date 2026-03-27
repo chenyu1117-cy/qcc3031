@@ -14,6 +14,7 @@ typedef struct
     Source uart_source;
     char line[RX_LINE_BUFFER_SIZE];   // 行缓冲区
     uint16 line_len;                   // 当前已接收字节数
+    bool at_ck01_sending;    // 控制是否正在发送AT+CK01
 } UARTStreamTaskData;
 
 extern UARTStreamTaskData theUARTStreamTask;
