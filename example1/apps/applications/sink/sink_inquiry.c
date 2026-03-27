@@ -44,6 +44,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <stdlib.h>
 #include "my_uart.h"
 #include "connection_no_ble.h"
+#include "cq_cmd.h"
 
 #define MAKE_INQ_MESSAGE(TYPE) TYPE##_T *message = PanicUnlessNew(TYPE##_T);
 
@@ -1592,6 +1593,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
                     //     uart_data_stream_tx_data((uint8 *)buffer, len);
                     // }
 
+                    is_inquiry_mode = 1;  // 设置为搜索模式
                     ConnectionReadRemoteName(&theSink.task, &result->bd_addr);
 
 

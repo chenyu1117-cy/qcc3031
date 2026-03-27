@@ -186,6 +186,7 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
 
 #include "my_uart.h"
 #include "my_ps.h"
+#include "cq_cmd.h"
 
 #ifdef DEBUG_MAIN
     #define MAIN_DEBUG(x) DEBUG(x)
@@ -986,19 +987,19 @@ static void handleDeviceAndAudioRoutingInfoEvents(const MessageId id)
         case EventSysPrimaryDeviceConnected:
         case EventSysSecondaryDeviceConnected:
         case EventSysAgSourceConnected:
-            uart_data_stream_tx_data((const uint8 *)"connected\r\n", 9);
+            uart_data_stream_tx_data((const uint8 *)"connected\r\n", 11);
         break;
 
         /* 断开连接 - UART发送 */
         case EventSysPrimaryDeviceDisconnected:
         case EventSysSecondaryDeviceDisconnected:
         case EventSysAllAgSourcesDisconnected:
-            uart_data_stream_tx_data((const uint8 *)"disconnected\r\n", 12);
+            uart_data_stream_tx_data((const uint8 *)"disconnected\r\n", 14);
         break;
 
         /* 配对成功 - UART发送 */
         case EventSysPairingSuccessful:
-            uart_data_stream_tx_data((const uint8 *)"paired\r\n", 9);
+            uart_data_stream_tx_data((const uint8 *)"paired\r\n", 8);
         break;
 
 #ifdef ENABLE_PEER
@@ -4948,12 +4949,28 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
     }
 
     // 通过 UART 输出设备信息和名称
-    char output[128];
-    int out_len = snprintf(output, sizeof(output),
-                           "XXSF0%s%s\n",
-                           addr_str, name_buf);
-    if (out_len > 0 && out_len < sizeof(output))
+    if (is_inquiry_mode)
     {
-        uart_data_stream_tx_data((const uint8 *)output, out_len);
+        // 搜索设备：发送 XXSF0...
+        char output[128];
+        int out_len = snprintf(output, sizeof(output),
+                            "XXSF0%s%s\n",
+                            addr_str, name_buf);
+        if (out_len > 0 && out_len < sizeof(output))
+        {
+            uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+    }
+    else
+    {
+        // 连接成功：发送 SA...
+        char output[128];
+        int out_len = snprintf(output, sizeof(output),
+                            "XXSA%s%s\n",
+                            addr_str, name_buf);
+        if (out_len > 0 && out_len < sizeof(output))
+        {
+            uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
     }
 }

@@ -68,6 +68,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <a2dp.h>
 
 #include "sink_ba.h"
+#include "cq_cmd.h"
 
 #ifdef DEBUG_SLC
     #define SLC_DEBUG(x) DEBUG(x)
@@ -400,6 +401,8 @@ static void slcConnectionComplete(hfp_link_priority priority, Sink sink, const b
             (bd_addr->lap >> 8) & 0xFF, 
             bd_addr->lap & 0xFF); 
     uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+    is_inquiry_mode = FALSE;  // 设置为连接模式
+    ConnectionReadRemoteName(&theSink.task, bd_addr);
 
     /* Another connection made, update number of current connections */
     SLC_DEBUG(("SLC: Pro Connected[%x], NoOfDev=%x\n", (int)sink,deviceManagerNumConnectedDevs())) ;

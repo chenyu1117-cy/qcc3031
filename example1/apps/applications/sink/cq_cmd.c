@@ -19,6 +19,7 @@
 #include "sink_private_data.h"
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
+int is_inquiry_mode = 0;
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
