@@ -4983,7 +4983,7 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
     }
     else if(is_inquiry_mode==2)
     {
-        // 查询配对记录成功：发送 [XXMX(index)(蓝牙地址)(名字)]
+        // 查询配对记录成功：发送 [MX(index)(蓝牙地址)(名字)]
         char output[128];
         int out_len;
         sink_attributes attributes;
@@ -5013,7 +5013,7 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
         // 打印格式：[XXMX(index)(蓝牙地址)(名字)]
         out_len = snprintf(output, sizeof(output),
                             "MX%d%s%s\n",
-                            g_current_pair_index,
+                            g_current_pair_index + 1,
                             addr_str, name_buf);
         if (out_len > 0 && out_len < sizeof(output))
         {
