@@ -2,6 +2,8 @@
 #define _CQ_CMD_H
 
 extern int is_inquiry_mode;
+extern uint16 g_current_pair_index;
+extern uint16 g_total_pair_count;
 
 typedef enum {
     BLINK_COMMAND_HEAD,

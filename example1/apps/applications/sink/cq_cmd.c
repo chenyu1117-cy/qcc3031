@@ -19,7 +19,9 @@
 #include "sink_private_data.h"
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
-int is_inquiry_mode = 0;
+int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
+uint16 g_current_pair_index = 0;
+uint16 g_total_pair_count = 0;
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -282,14 +284,14 @@ void handle_at_command(recv_t *recv)
     switch (cmd) {
         case BLINK_START_DISCOVERY:// "SD"
             // 执行查询操作
-            uart_data_stream_tx_data((const uint8*)"XXQS\r\n", 6);
+            uart_data_stream_tx_data((const uint8*)"QS\r\n", 6);
             inquiryStart(0);
             break;
 
         case BLINK_STOP_DISCOVERY:  // "ST"
             // 停止查询操作
             inquiryStop();
-            uart_data_stream_tx_data((const uint8*)"inquiry_stop\r\n", 14);
+            uart_data_stream_tx_data((const uint8*)"SH0\r\n", 5);
             break;
 
         case BLINK_CONNECT_DEVICE:      // "CC[xx:xx:xx:xx:xx:xx]"
@@ -302,9 +304,9 @@ void handle_at_command(recv_t *recv)
             if (strToBdaddr(recv->param, &addr))
             {
                 char buffer[32];
-                snprintf(buffer, sizeof(buffer), "XXIV%s\r\n",recv->param);
+                snprintf(buffer, sizeof(buffer), "IV%s\r\n",recv->param);
                 uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
-                uart_data_stream_tx_data((const uint8*)"XXP1\r\n", 6);
+                uart_data_stream_tx_data((const uint8*)"P1\r\n", 6);
                 slcConnectDevice(&addr,sink_hfp | sink_a2dp | sink_avrcp);
             }
             else
@@ -330,29 +332,20 @@ void handle_at_command(recv_t *recv)
             sink_attributes attributes;
             typed_bdaddr dev_addr;
             uint16 pdl_size = 0;
-            uint16 index = 0;
-            char buffer[64];
-            int len;
             
             pdl_size = sinkDataGetPDLSize();
+            g_total_pair_count = pdl_size;
+            g_current_pair_index = 0;
             
-            len = sprintf(buffer, "Total paired devices: %d\r\n", pdl_size);
-            //uart_data_stream_tx_data((const uint8*)buffer, len);
-            
-            for(index = 0; index < pdl_size; index++)
+            if(pdl_size > 0)
             {
-                if(deviceManagerGetIndexedAttributes(index, &attributes, &dev_addr))
+                is_inquiry_mode = 2; // 设置为配对记录查询模式
+                // 获取第一个设备并请求名称
+                if(deviceManagerGetIndexedAttributes(0, &attributes, &dev_addr))
                 {
-                    len = sprintf(buffer, "Device %d: %04X:%02X:%06lX, Profiles: 0x%02X\r\n", 
-                            index,
-                            dev_addr.addr.nap,
-                            dev_addr.addr.uap,
-                            dev_addr.addr.lap,
-                            attributes.profiles);
-                    uart_data_stream_tx_data((const uint8*)buffer, len);
+                    ConnectionReadRemoteName(&theSink.task, &dev_addr.addr);
                 }
             }
-            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
             break;
         }
 

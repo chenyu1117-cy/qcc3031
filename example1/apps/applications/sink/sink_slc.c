@@ -393,7 +393,7 @@ static void slcConnectionComplete(hfp_link_priority priority, Sink sink, const b
 
     
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "XXIB%02X%02X%02X%02X%02X%02X\r\n", 
+    snprintf(buffer, sizeof(buffer), "IB%02X%02X%02X%02X%02X%02X\r\n", 
             (bd_addr->nap >> 8) & 0xFF, 
             bd_addr->nap & 0xFF, 
             bd_addr->uap, 
@@ -401,7 +401,7 @@ static void slcConnectionComplete(hfp_link_priority priority, Sink sink, const b
             (bd_addr->lap >> 8) & 0xFF, 
             bd_addr->lap & 0xFF); 
     uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
-    is_inquiry_mode = FALSE;  // 设置为连接模式
+    is_inquiry_mode = 1;  // 设置为连接模式
     ConnectionReadRemoteName(&theSink.task, bd_addr);
 
     /* Another connection made, update number of current connections */

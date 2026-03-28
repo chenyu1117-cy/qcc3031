@@ -1593,7 +1593,7 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
                     //     uart_data_stream_tx_data((uint8 *)buffer, len);
                     // }
 
-                    is_inquiry_mode = 1;  // 设置为搜索模式
+                    is_inquiry_mode = 0;  // 设置为搜索模式
                     ConnectionReadRemoteName(&theSink.task, &result->bd_addr);
 
 

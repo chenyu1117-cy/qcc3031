@@ -191,7 +191,7 @@ void uart_data_stream_rx_data(Source src)
                         // 收到回应，停止发送AT+CK01
                         theUARTStreamTask.at_ck01_sending = FALSE;
                         MessageCancelAll(&theUARTStreamTask.task, EventSysSendAtCk01);
-                        uart_data_stream_tx_data((const uint8*)"XXIS\r\n", 7);
+                        uart_data_stream_tx_data((const uint8*)"IS\r\n", 7);
                     }
 
                     uart_data_stream_tx_data((const uint8*)"AT+ACK\r\n", 9);

@@ -76,6 +76,7 @@ Copyright (c) 2004 - 2018 Qualcomm Technologies International, Ltd.
 #ifdef SBC_ENCODER_CONFORMANCE
 #include "sink_sbc.h"
 #endif
+#include "my_uart.h"
 
 #ifdef DEBUG_A2DP
 #define A2DP_DEBUG(x) DEBUG(x)
@@ -4028,6 +4029,16 @@ void handleA2DPSignallingConnected(a2dp_status_code status, uint8 DeviceId, bdad
         else
         {
             a2dp_index_t index;
+
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "MU%02X%02X%02X%02X%02X%02X\r\n",
+                    (SrcAddr.nap >> 8) & 0xFF,
+                    SrcAddr.nap & 0xFF,
+                    SrcAddr.uap,
+                    (SrcAddr.lap >> 16) & 0xFF,
+                    (SrcAddr.lap >> 8) & 0xFF,
+                    SrcAddr.lap & 0xFF);
+            uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     
             /* For a2dp connected Tone and Voice Prompt */
             MessageSendLater(&theSink.task, EventSysA2dpConnected, 0, A2DP_DATA.ui_connect_update_delay);
@@ -5952,6 +5963,9 @@ static void sinkUpdateCodecConfiguredToApp( uint8 deviceId,uint8 streamId)
 
     if(codec_settings != NULL)
     {       
+        char uart_buf[32];
+        sprintf(uart_buf, "VP%d\r\n", codec_settings->seid);
+        uart_data_stream_tx_data((const uint8*)uart_buf, strlen(uart_buf));  
         switch(codec_settings->seid)
         {
             case APTX_SEID:

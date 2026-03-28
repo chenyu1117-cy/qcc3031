@@ -4949,28 +4949,92 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
     }
 
     // 通过 UART 输出设备信息和名称
-    if (is_inquiry_mode)
+    if (is_inquiry_mode==0)
     {
         // 搜索设备：发送 XXSF0...
         char output[128];
         int out_len = snprintf(output, sizeof(output),
-                            "XXSF0%s%s\n",
+                            "SF0%s%s\n",
                             addr_str, name_buf);
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
         }
     }
-    else
+    else if(is_inquiry_mode==1)
     {
-        // 连接成功：发送 SA...
+        // 连接成功：发送 JH...
         char output[128];
         int out_len = snprintf(output, sizeof(output),
-                            "XXSA%s%s\n",
+                            "JH%s\n",
+                            addr_str);
+        if (out_len > 0 && out_len < sizeof(output))
+        {
+            uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+        // 连接成功：发送 SA...
+        out_len = snprintf(output, sizeof(output),
+                            "SA%s\n",
+                             name_buf);
+        if (out_len > 0 && out_len < sizeof(output))
+        {
+            uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+    }
+    else if(is_inquiry_mode==2)
+    {
+        // 查询配对记录成功：发送 [XXMX(index)(蓝牙地址)(名字)]
+        char output[128];
+        int out_len;
+        sink_attributes attributes;
+        typed_bdaddr next_dev_addr;
+        
+        // 转换地址为字符串格式（使用函数开头已定义的 addr_str）
+        sprintf(addr_str, "%02X%02X%02X%02X%02X%02X",
+                message->bd_addr.nap >> 8, message->bd_addr.nap & 0xFF,
+                message->bd_addr.uap,
+                (message->bd_addr.lap >> 16) & 0xFF,
+                (message->bd_addr.lap >> 8) & 0xFF,
+                message->bd_addr.lap & 0xFF);
+        
+        if (message->status == rnr_success && message->size_remote_name > 0)
+        {
+            uint16 len = message->size_remote_name;
+            if (len > sizeof(name_buf) - 1)
+                len = sizeof(name_buf) - 1;
+            memcpy(name_buf, message->remote_name, len);
+            name_buf[len] = '\0';
+        }
+        else
+        {
+            strcpy(name_buf, "?");
+        }
+        
+        // 打印格式：[XXMX(index)(蓝牙地址)(名字)]
+        out_len = snprintf(output, sizeof(output),
+                            "MX%d%s%s\n",
+                            g_current_pair_index,
                             addr_str, name_buf);
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+        
+        // 继续查询下一个设备
+        g_current_pair_index++;
+        if(g_current_pair_index < g_total_pair_count)
+        {
+            // 获取下一个设备并请求名称
+            if(deviceManagerGetIndexedAttributes(g_current_pair_index, &attributes, &next_dev_addr))
+            {
+                ConnectionReadRemoteName(&theSink.task, &next_dev_addr.addr);
+            }
+        }
+        else
+        {
+            // 所有设备查询完成
+            uart_data_stream_tx_data((const uint8*)"OK\r\n", 4);
+            is_inquiry_mode = 1; // 恢复默认模式
         }
     }
 }

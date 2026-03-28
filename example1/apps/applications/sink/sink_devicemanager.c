@@ -39,6 +39,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <bdaddr.h>
 #include <audio.h>
 #include <string.h>
+#include "my_uart.h"
 
 #ifdef DEBUG_DEV
     #define DEV_DEBUG(x) DEBUG(x)
@@ -1088,7 +1089,7 @@ RETURNS
 */
 
 void handleEventSysUpdateDevicesConnectedStatus(void)
-{     
+{
     /* have we connected to/disconnected from any AG/Source? */
     if(deviceManagerIsAgSourceConnected() != ag_source_connected)
     {
@@ -1113,6 +1114,70 @@ void handleEventSysUpdateDevicesConnectedStatus(void)
         PioDrivePio(PeerGetConnectionPio(), peer_connected);
         sinkCancelAndSendLater(peer_connected ? EventSysPeerConnected : EventSysPeerDisconnected, D_SEC(0));
     }
+
+    /* 新增的状态发送代码开始 */
+    {
+        uint8 hf_state = 1;
+        uint8 av_state = 1;
+        hfp_call_state call_state = hfp_call_state_idle;
+        char buffer[32];
+        
+        /* 获取HFP状态 */
+        if (HfpLinkGetCallState(hfp_primary_link, &call_state))
+        {
+            switch(call_state)
+            {
+                case hfp_call_state_idle:
+                    if (sinkHfpDataGetProfileStatusConnected(PROFILE_INDEX(hfp_primary_link)) == hfp_connected)
+                    {
+                        hf_state = 3;
+                    }
+                    else
+                    {
+                        hf_state = 1;
+                    }
+                    break;
+                case hfp_call_state_outgoing:
+                    hf_state = 4;
+                    break;
+                case hfp_call_state_incoming:
+                    hf_state = 5;
+                    break;
+                case hfp_call_state_active:
+                    hf_state = 6;
+                    break;
+                default:
+                    hf_state = 1;
+                    break;
+            }
+        }
+        else
+        {
+            if (sinkHfpDataGetProfileStatusConnected(PROFILE_INDEX(hfp_primary_link)) == hfp_connected)
+            {
+                hf_state = 3;
+            }
+            else
+            {
+                hf_state = 1;
+            }
+        }
+        
+        /* 获取A2DP状态 - 1:未连接 2:已连接 */
+        if (getA2dpStatusFlag(CONNECTED, a2dp_primary))
+        {
+            av_state = 2;
+        }
+        else
+        {
+            av_state = 1;
+        }
+        
+        /* 发送状态 */
+        snprintf(buffer, sizeof(buffer), "S%d%d]\r\n", hf_state, av_state);
+        uart_data_stream_tx_data((const uint8 *)buffer, strlen(buffer));
+    }
+    /* 新增的状态发送代码结束 */
 }
 
 /****************************************************************************
