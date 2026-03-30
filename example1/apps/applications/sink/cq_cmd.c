@@ -17,6 +17,7 @@
 #include "sink_devicemanager.h"
 #include <bdaddr.h>
 #include "sink_private_data.h"
+#include "sink_hfp_data.h"
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
 int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
@@ -316,15 +317,110 @@ void handle_at_command(recv_t *recv)
             break;
         }
         case BLINK_DISCONNECT_DEVICE:       // "CD"
-            // 断开连接，清空pdl
-            // 1. 断开所有SLC连接
-            sinkDisconnectAllSlc();
-            // 2. 清空PDL（配对设备列表）
-            deviceManagerRemoveAllDevices();
-            /* 发送进入配对模式的事件 */
-            MessageSend(&theSink.task, EventSysEnterPairingEmptyPDL, 0);
+        {
+            // 断开连接
+            // 断开所有连接，但保持配对
+            bdaddr addr;
+            // 1. 断开 primary HFP 及相关
+            if(HfpLinkGetBdaddr(hfp_primary_link, &addr))
+            {
+                sinkDisconnectSlcFromDevice(&addr);
+                disconnectA2dpAvrcpFromDevice(&addr);
+            }
             uart_data_stream_tx_data((const uint8*)"disconnect\r\n", 12);
             break;
+        }
+
+        case BLINK_DELETE_PAIR_LIST:    //"CV"
+        {
+            if (recv->param && strlen(recv->param) > 0)
+            {
+                bdaddr addr;
+                if (strToBdaddr(recv->param, &addr))
+                {
+                    deviceManagerRemoveDevice(&addr);
+                }
+            }
+            break;
+        }
+
+        case BLINK_UNKNOWN_2:          //"YI"
+        {
+            uint8 hf_state = 1;
+            uint8 av_state = 1;
+            hfp_call_state call_state = hfp_call_state_idle;
+            bdaddr dev_addr;
+            char addr_str[13];
+            char buffer[64];
+            
+            // 获取HFP状态
+            if (HfpLinkGetCallState(hfp_primary_link, &call_state))
+            {
+                switch(call_state)
+                {
+                    case hfp_call_state_idle:
+                        if (sinkHfpDataGetProfileStatusConnected(PROFILE_INDEX(hfp_primary_link)) == hfp_connected)
+                        {
+                            hf_state = 3;
+                        }
+                        else
+                        {
+                            hf_state = 1;
+                        }
+                        break;
+                    case hfp_call_state_outgoing:
+                        hf_state = 4;
+                        break;
+                    case hfp_call_state_incoming:
+                        hf_state = 5;
+                        break;
+                    case hfp_call_state_active:
+                        hf_state = 6;
+                        break;
+                    default:
+                        hf_state = 1;
+                        break;
+                }
+            }
+            else
+            {
+                if (sinkHfpDataGetProfileStatusConnected(PROFILE_INDEX(hfp_primary_link)) == hfp_connected)
+                {
+                    hf_state = 3;
+                }
+                else
+                {
+                    hf_state = 1;
+                }
+            }
+            
+            // 获取A2DP状态 - 1:未连接 2:已连接
+            if (getA2dpStatusFlag(CONNECTED, a2dp_primary))
+            {
+                av_state = 2;
+            }
+            else
+            {
+                av_state = 1;
+            }
+            
+            // 获取当前连接设备地址
+            if (deviceManagerGetProfileAddr(conn_hfp_pri, &dev_addr))
+            {
+                // 转换地址为字符串格式
+                sprintf(addr_str, "%02X%02X%02X%02X%02X%02X",
+                        dev_addr.nap >> 8, dev_addr.nap & 0xFF,
+                        dev_addr.uap,
+                        (dev_addr.lap >> 16) & 0xFF,
+                        (dev_addr.lap >> 8) & 0xFF,
+                        dev_addr.lap & 0xFF);
+                        
+                // 按照格式发送 [S(HFP状态)(A2DP状态)PS0504JH(地址)]
+                snprintf(buffer, sizeof(buffer), "S%d%d\n\nPS0504\n\nJH%s\r\n", hf_state, av_state, addr_str);
+                uart_data_stream_tx_data((const uint8 *)buffer, strlen(buffer));
+            }
+            break;
+        }
 
         case BLINK_INQUIRY_PAIR_RECORD:// "MX"
             //查询配对记录
