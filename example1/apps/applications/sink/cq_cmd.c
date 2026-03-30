@@ -459,13 +459,11 @@ void handle_at_command(recv_t *recv)
         case BLINK_NEXT_SOUND:   // "MD"
             //下一曲:::MD
             sinkAvrcpSkipForward();
-            uart_data_stream_tx_data((const uint8*)"Next track command sent\n", 26);
             break;
 
         case BLINK_PREV_SOUND:    //"ME"              
             //上一曲:::ME
             sinkAvrcpSkipBackward();
-            uart_data_stream_tx_data((const uint8*)"Previous track command sent\n", 30);
             break;
 
         case BLINK_FAST_FORWARD:   // "MR"              

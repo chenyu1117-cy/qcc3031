@@ -59,7 +59,7 @@ Copyright (c) 2004 - 2017 Qualcomm Technologies International, Ltd.
 #include <vmal.h>
 #include "my_uart.h"
 #include <stdio.h>
-#define DEBUG_AVRCP
+//#define DEBUG_AVRCP
 #ifdef DEBUG_AVRCP
 #define AVRCP_DEBUG(x) DEBUG(x)
 #else
@@ -2284,14 +2284,11 @@ static void handleAvrcpGetPlayStatusCfm(const AVRCP_GET_PLAY_STATUS_CFM_T *msg)
         
         // 打印初始状态
         uint32 position = msg->song_elapsed;
-        uint8 percentage = 0;
-        if (gTotalDuration > 0)
-        {
-            percentage = (position * 100) / gTotalDuration;
-        }
+        uint32 status = 1;
+        
         
         char buffer[60];
-        sprintf(buffer, "Playback: %u/%u (%u%%)\r\n", position, gTotalDuration, percentage);
+        sprintf(buffer, "MP%u\xff%u\xff%u\r\n", gTotalDuration,  position, status );
         uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     }
 }
@@ -2415,10 +2412,12 @@ static void handleAvrcpPlayStatusChangedInd(const AVRCP_EVENT_PLAYBACK_STATUS_CH
                 }
                 // 当播放状态变为播放时，获取总时间
                 sinkAvrcpRetrievePlayStatus();
+                //uart_data_stream_tx_data((const uint8*)"MB\r\n", 4);
             }
             else if (AVRCP_DATA.play_status[Index] == sinkavrcp_play_status_stopped ||
                      AVRCP_DATA.play_status[Index] == sinkavrcp_play_status_paused)
             {
+                //uart_data_stream_tx_data((const uint8*)"MA\r\n", 4);
                 a2dp_index_t a2dpIndex;
 
                 if ((msg->response == avctp_response_changed) && getA2dpIndexFromAvrcp(Index, &a2dpIndex))
@@ -2523,6 +2522,7 @@ static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTE
     char title[128] = {0};
     char artist[128] = {0};
     char album[128] = {0}; 
+    char play_time[32] = {0};
 
     if ((msg->status == avrcp_success) && (sinkAvrcpGetIndexFromInstance(msg->avrcp, &Index)))
     {
@@ -2588,6 +2588,10 @@ static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTE
                             if (attribute_length < sizeof(album))
                                 strncpy(album, (const char*)&lSource[i + 8], attribute_length);
                             break;
+                        case AVRCP_MEDIA_ATTRIBUTE_PLAYING_TIME:
+                        if (attribute_length < sizeof(play_time))
+                            strncpy(play_time, (const char*)&lSource[i + 8], attribute_length);
+                        break;
                         default:
                             // 其他属性，可根据需要添加
                             break;
@@ -2620,7 +2624,7 @@ static void handleAvrcpGetElementAttributesCfm(const AVRCP_GET_ELEMENT_ATTRIBUTE
             AVRCP_DEBUG(("   fail; no source; num attributes zero\n"));
         }
         char buffer[512];
-        snprintf(buffer, sizeof(buffer), "MI[%s][FF][%s][FF][%s][FF][0]\n", title, artist, album);
+        snprintf(buffer, sizeof(buffer), "MI%s\xff%s\xff%s\xff[cover_handle]\n", title, artist, play_time);
         uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     }
     else
@@ -2755,14 +2759,9 @@ static void handleAvrcpPlaybackPosChangedInd(const AVRCP_EVENT_PLAYBACK_POS_CHAN
             
             // 计算并打印百分比
             uint32 position = msg->playback_pos;
-            uint8 percentage = 0;
-            if (gTotalDuration > 0)
-            {
-                percentage = (position * 100) / gTotalDuration;
-            }
-            
+            uint32 status = 1;
             char buffer[60];
-            sprintf(buffer, "Playback: %u/%u (%u%%)\r\n", position, gTotalDuration, percentage);
+            sprintf(buffer, "MP%u\xff%u\xff%u\r\n", gTotalDuration,  position, status );
             uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
         }     
         else
