@@ -606,8 +606,9 @@ void handle_at_command(recv_t *recv)
             HfpDtmfRequest(hfp_primary_link, recv->param[0]);
             break;
 
-        case BLINK_SET_PHONE_PHONE_BOOK:    // "PA"
+        case BLINK_SET_SIM_PHONE_BOOK:    // "PA"
             //读取手机电话本
+            uart_data_stream_tx_data((const uint8*)"PA\r\n", 4);
             if (pbapConnect(hfp_primary_link)) 
             { 
                 pbapSetActivePhonebook(pbap_pb); 
