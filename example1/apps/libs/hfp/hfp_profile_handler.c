@@ -46,6 +46,7 @@ NOTES
 #include "hfp_csr_features.h"
 
 #include <print.h>
+#include "../../applications/sink/my_uart.h"
 
 #ifdef HYDRACORE
 PRESERVE_TYPE_FOR_DEBUGGING(HFP_INTERNAL_T)
@@ -247,6 +248,7 @@ void hfpProfileHandler(Task task, MessageId id, Message message)
                                 
                                 case HFP_INTERNAL_AT_TERMINATE_REQ:
                                     PRINT(("HFP_INTERNAL_AT_TERMINATE_REQ\n"));
+                                    uart_data_stream_tx_data((const uint8 *)"IF\r\n", 4);
                                     cmd_ok = hfpHandleTerminateCall(link, hfpChupCmdPending);
                                 break;
                                 

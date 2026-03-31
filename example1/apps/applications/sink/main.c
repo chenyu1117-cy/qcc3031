@@ -3915,6 +3915,56 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
 #endif
             }
             sinkHandleCallInd((const HFP_CALL_STATE_IND_T*)message);
+            
+            // 仿照 BLINK_UNKNOWN_2 的格式发送 S(HFP状态)(A2DP状态)
+            {
+                uint8 hf_state = 1;
+                uint8 av_state = 1;
+                hfp_call_state call_state = ((HFP_CALL_STATE_IND_T*)message)->call_state;
+                char buffer[64];
+                
+                // 获取HFP状态
+                switch(call_state)
+                {
+                    case hfp_call_state_idle:
+                        if (sinkHfpDataGetProfileStatusConnected(PROFILE_INDEX(hfp_primary_link)) == hfp_connected)
+                        {
+                            hf_state = 3;
+                        }
+                        else
+                        {
+                            hf_state = 1;
+                        }
+                        break;
+                    case hfp_call_state_outgoing:
+                        hf_state = 4;
+                        break;
+                    case hfp_call_state_incoming:
+                        hf_state = 5;
+                        break;
+                    case hfp_call_state_active:
+                        hf_state = 6;
+                        break;
+                    default:
+                        hf_state = 1;
+                        break;
+                }
+                
+                // 获取A2DP状态 - 1:未连接 2:已连接
+                if (getA2dpStatusFlag(CONNECTED, a2dp_primary))
+                {
+                    av_state = 2;
+                }
+                else
+                {
+                    av_state = 1;
+                }
+                
+                // 按照格式发送 S(HFP状态)(A2DP状态)
+                snprintf(buffer, sizeof(buffer), "S%d%d\r\n", hf_state, av_state);
+                uart_data_stream_tx_data((const uint8 *)buffer, strlen(buffer));
+                            
+            }
         }
     break;
 
@@ -3990,36 +4040,36 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
     break;
 
     case HFP_CALLER_ID_IND:
+    {
+        const HFP_CALLER_ID_IND_T *ind = (const HFP_CALLER_ID_IND_T *) message;
+
+        /* ensure this is not a HSP profile */
+        MAIN_DEBUG_L1(("HFP_CALLER_ID_IND number %s", ind->caller_number));
+
+        /* Show name or number on display */
+        if (ind->size_name)
         {
-            const HFP_CALLER_ID_IND_T *ind = (const HFP_CALLER_ID_IND_T *) message;
-
-            /* ensure this is not a HSP profile */
-            MAIN_DEBUG_L1(("HFP_CALLER_ID_IND number %s", ind->caller_number));
-
-            /* Show name or number on display */
-            if (ind->size_name)
-            {
-                MAIN_DEBUG_L1((" name %s\n", ind->caller_name));
-                displayShowSimpleText((char*) ind->caller_name, SINK_TEXT_TYPE_CALLER_INFO);
-            }
-            else
-            {
-                MAIN_DEBUG_L1((" No Name\n"));
-                displayShowSimpleText((char*) ind->caller_number, SINK_TEXT_TYPE_CALLER_INFO);
-            }
-
-            /* Attempt to play caller name */
-            if(!AudioPromptPlayCallerName (ind->size_name, ind->caller_name))
-            {
-                /* Caller name not present or not supported, try to play number */
-                AudioPromptPlayCallerNumber(ind->size_number, ind->caller_number) ;
-            }
-
-            if (ind->size_name)
-            {
-                free(ind->caller_name);
-            }
+            MAIN_DEBUG_L1((" name %s\n", ind->caller_name));
+            displayShowSimpleText((char*) ind->caller_name, SINK_TEXT_TYPE_CALLER_INFO);
         }
+        else
+        {
+            MAIN_DEBUG_L1((" No Name\n"));
+            displayShowSimpleText((char*) ind->caller_number, SINK_TEXT_TYPE_CALLER_INFO);
+        }
+
+        /* Attempt to play caller name */
+        if(!AudioPromptPlayCallerName (ind->size_name, ind->caller_name))
+        {
+            /* Caller name not present or not supported, try to play number */
+            AudioPromptPlayCallerNumber(ind->size_number, ind->caller_number) ;
+        }
+
+        if (ind->size_name)
+        {
+            free(ind->caller_name);
+        }
+    }
 
     break;
 
@@ -4042,12 +4092,12 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
                             TRUE_OR_FALSE(((const HFP_CALL_WAITING_ENABLE_CFM_T * )message)->status == hfp_success)));
     break ;
     case HFP_CALL_WAITING_IND:
-        {
-            /* pass the indication to the multipoint handler which will determine if the call waiting tone needs
-               to be played, this will depend upon whether the indication has come from the AG with
-               the currently routed audio */
-            mpHandleCallWaitingInd((HFP_CALL_WAITING_IND_T *)message);
-        }
+    {
+        /* pass the indication to the multipoint handler which will determine if the call waiting tone needs
+            to be played, this will depend upon whether the indication has come from the AG with
+            the currently routed audio */
+        mpHandleCallWaitingInd((HFP_CALL_WAITING_IND_T *)message);
+    }
     break;
 
 #endif
@@ -4075,7 +4125,7 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         MAIN_DEBUG_L1(("HS3: HFP_CURRENT_CALLS_CFM [%c]\n",
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
     break ;
-    case HFP_CURRENT_CALLS_IND:
+        case HFP_CURRENT_CALLS_IND:
     {
         char output[96];
         int out_len;
@@ -4124,12 +4174,14 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         else
         {
                 audioHandleSyncConnectCfm(conn_cfm);
+                uart_data_stream_tx_data((const uint8 *)"T0\r\n", 4);
             }
         }
     break ;
     case HFP_AUDIO_DISCONNECT_IND:
         MAIN_DEBUG_L1(("HFP_AUDIO_DISCONNECT_IND [%x]\n", ((const HFP_AUDIO_DISCONNECT_IND_T *)message)->status)) ;
         audioHandleSyncDisconnectInd ((const HFP_AUDIO_DISCONNECT_IND_T *)message) ;
+        uart_data_stream_tx_data((const uint8 *)"T1\r\n", 4);
     break ;
     case HFP_SIGNAL_IND:
         MAIN_DEBUG_L1(("HS: HFP_SIGNAL_IND [%d]\n", ((const HFP_SIGNAL_IND_T* )message)->signal )) ;

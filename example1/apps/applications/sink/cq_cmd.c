@@ -333,14 +333,15 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_DELETE_PAIR_LIST:    //"CV"
         {
-            if (recv->param && strlen(recv->param) > 0)
-            {
-                bdaddr addr;
-                if (strToBdaddr(recv->param, &addr))
-                {
-                    deviceManagerRemoveDevice(&addr);
-                }
-            }
+            // if (recv->param && strlen(recv->param) > 0)
+            // {
+            //     bdaddr addr;
+            //     if (strToBdaddr(recv->param, &addr))
+            //     {
+            //         deviceManagerRemoveDevice(&addr);
+            //     }
+            // }
+            deviceManagerRemoveAllDevices();
             break;
         }
 
@@ -500,6 +501,25 @@ void handle_at_command(recv_t *recv)
                 DEBUG(("ERROR: Missing name parameter\r\n"));
             }
             break;
+
+        case BLINK_DIAL:              //"CW"
+            //拨打电话
+            {
+                char buffer[64];
+                uint16 len = strlen(recv->param);
+                if (recv->param && strlen(recv->param) > 0) 
+                {
+                    bdaddr addr;
+                    if (HfpLinkGetBdaddr(hfp_primary_link, &addr)) 
+                    {
+                        HfpDialNumberRequest(hfp_primary_link, strlen(recv->param), (const uint8*)recv->param);
+                        snprintf(buffer, sizeof(buffer), "IC%d%d%s\r\n", len/10, len%10, recv->param);
+                        uart_data_stream_tx_data((const uint8 *)buffer, strlen(buffer));
+                    } 
+                }
+                break;
+            }
+            
 
         case BLINK_ACCEPT_INCOMING:   // "CE"
             //接听来电
