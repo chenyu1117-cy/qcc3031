@@ -977,6 +977,7 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
         PbapcPullComplete(pMsg->device_id);
         linkPolicyPhonebookAccessComplete(PbapcGetSink(pbapGetActiveLink()));
         uart_data_stream_tx_data((const uint8*)"PC\r\n", 4);
+        uart_data_stream_tx_data((const uint8*)"PE\r\n", 4);        
         pbapSetCommand(pbapc_action_idle);
     }
 }
@@ -1155,6 +1156,42 @@ static uint16 VcardFindMetaData( const uint8 *start, const uint8 *end, uint8 **m
     }
     
     return(uint16)(endstring - (*metaData));
+}
+
+static uint16 VcardFindDate(const uint8 *start, const uint8 *end, uint8 **pDate)
+{
+    uint16 len;
+    const uint8 *p = start;
+    uint8 *endstring = NULL;
+       
+    PBAP_DEBUG(("PBAP VcardFindDate\n"));
+
+    len = (uint16)(end - p);
+    
+    if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-CALL-DATE", 12)) != NULL) &&
+       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
+    {
+        (*pDate) += 1;
+        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
+    }
+    else if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-IRMC-CALL-DATETIME", 21)) != NULL) &&
+       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
+    {
+        (*pDate) += 1;
+        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
+    }
+    else if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"REV", 3)) != NULL) &&
+       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
+    {
+        (*pDate) += 1;
+        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
+    }
+    else
+    {
+        return 0;
+    }
+    
+    return (uint16)(endstring - (*pDate));
 }
 
 static uint8 VcardGetFirstTel(const uint8* pVcard, const uint16 vcardLen, pbapMetaData **pMetaData)
@@ -1362,7 +1399,6 @@ static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status statu
 
 static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_type_t type)
 {
-    UNUSED(type);
     const uint8 *start = memstr(pVcard, vcardLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
     const uint8 *end = memstr(pVcard, vcardLen, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
     const uint8 *pNextStart = pVcard;
@@ -1372,44 +1408,89 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
     {
         uint8 *pTel = NULL;
         uint8 *pName = NULL;
+        uint8 *pDate = NULL;
         uint16 telLen = 0;
         uint16 nameLen = 0;
+        uint16 dateLen = 0;
+        uint8 callType = 0;
         
         start = start + strlen(gpbapbegin);
         
         telLen = VcardFindMetaData(start, end, &pTel, gpbaptel, (const uint16)strlen(gpbaptel));
         nameLen = VcardFindMetaData(start, end, &pName, gpbapname, (const uint16)strlen(gpbapname));
         
-        // 先发送 PB+长度
-        char header[32];
-        int header_len = snprintf(header, sizeof(header), "PB%02d%02d", nameLen, telLen);
-        if (header_len > 0)
+        if (type != PBAP_TYPE_PHONEBOOK)
         {
-            uart_data_stream_tx_data((const uint8*)header, header_len);
+            dateLen = VcardFindDate(start, end, &pDate);
+            if (type == PBAP_TYPE_OCH)
+                callType = 4;
+            else if (type == PBAP_TYPE_ICH)
+                callType = 5;
+            else if (type == PBAP_TYPE_MCH)
+                callType = 6;
         }
         
-        // 直接发送名字（不复制）
-        if (nameLen > 0 && pName)
+        if (type == PBAP_TYPE_PHONEBOOK)
         {
-            // 处理名字中的 ';' 为空格
-            uint8 temp_name[256];
-            uint16 i;
-            for (i = 0; i < nameLen && i < 255; i++)
+            char header[32];
+            int header_len = snprintf(header, sizeof(header), "PB%02d%02d", nameLen, telLen);
+            if (header_len > 0)
             {
-                temp_name[i] = (pName[i] == ';') ? ' ' : pName[i];
+                uart_data_stream_tx_data((const uint8*)header, header_len);
             }
-            temp_name[i] = '\0';
-            uart_data_stream_tx_data(temp_name, i);
+            
+            if (nameLen > 0 && pName)
+            {
+                uint8 temp_name[256];
+                uint16 i;
+                for (i = 0; i < nameLen && i < 255; i++)
+                {
+                    temp_name[i] = (pName[i] == ';') ? ' ' : pName[i];
+                }
+                temp_name[i] = '\0';
+                uart_data_stream_tx_data(temp_name, i);
+            }
+            
+            if (telLen > 0 && pTel)
+            {
+                uart_data_stream_tx_data(pTel, telLen);
+            }
+            
+            uart_data_stream_tx_data((const uint8*)"\r\n", 2);
         }
-        
-        // 直接发送电话（不复制）
-        if (telLen > 0 && pTel)
+        else
         {
-            uart_data_stream_tx_data(pTel, telLen);
+            char header[64];
+            int header_len = snprintf(header, sizeof(header), "PD%c%02d%02d%02d", '0' + callType, nameLen, telLen, dateLen);
+            if (header_len > 0)
+            {
+                uart_data_stream_tx_data((const uint8*)header, header_len);
+            }
+            
+            if (nameLen > 0 && pName)
+            {
+                uint8 temp_name[256];
+                uint16 i;
+                for (i = 0; i < nameLen && i < 255; i++)
+                {
+                    temp_name[i] = (pName[i] == ';') ? ' ' : pName[i];
+                }
+                temp_name[i] = '\0';
+                uart_data_stream_tx_data(temp_name, i);
+            }
+            
+            if (telLen > 0 && pTel)
+            {
+                uart_data_stream_tx_data(pTel, telLen);
+            }
+            
+            if (dateLen > 0 && pDate)
+            {
+                uart_data_stream_tx_data(pDate, dateLen);
+            }
+            
+            uart_data_stream_tx_data((const uint8*)"\r\n", 2);
         }
-        
-        // 发送换行
-        uart_data_stream_tx_data((const uint8*)"\r\n", 2);
         
         pNextStart = end + strlen(gpbapend);
         remainingLen = (uint16)(pVcard + vcardLen - pNextStart);
