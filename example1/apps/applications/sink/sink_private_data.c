@@ -358,7 +358,7 @@ uint8 sinkDataGetPDLLimitForDiscovery(void)
 */
 bool sinkDataIsMITMRequired(void)
 {
-    bool mitm_enabled = FALSE;
+    bool mitm_enabled = TRUE;
     sinkdata_readonly_config_def_t *read_configdata = NULL;
     SINK_DATA_DEBUG(("SinkData:sinkDataIsMITMRequired()\n"));
 

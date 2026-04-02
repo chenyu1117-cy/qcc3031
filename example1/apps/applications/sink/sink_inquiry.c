@@ -1667,3 +1667,11 @@ void inquiryHandleResult( CL_DM_INQUIRE_RESULT_T* result )
         }
     }
 }
+
+void inquiryClearPrintedDevices(void)
+{
+    GINQDATA.printed_count = 0;
+    memset(GINQDATA.printed_devices, 0, sizeof(GINQDATA.printed_devices));
+}
+
+

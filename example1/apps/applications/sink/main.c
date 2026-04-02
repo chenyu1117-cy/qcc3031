@@ -226,6 +226,10 @@ void app_handler(Task task, MessageId id, Message message);
 
 char g_current_call_number[32] = {0};  // 存储当前通话的号码
 char g_waiting_call_number[32] = {0};  // 存储等待来电的号码
+char g_held_call_number[32] = {0};     // 存储后台保持通话号码
+char g_active_call_number[32] = {0};    // 存储当前活动通话号码
+static bool g_three_way_active = FALSE; // 三方通话是否激活
+//static bool g_waiting_for_calls_cfm = FALSE;  // 标记是否正在等待通话列表完成
 
 static void handleHFPStatusCFM ( hfp_lib_status pStatus ) ;
 static void sinkConnectionInit(void);
@@ -3762,6 +3766,16 @@ static void handleUEMessage  ( Task task, MessageId id, Message message )
             UsbDebugEnableAllow();
             break;
 #endif /* ENABLE_ALLOW_USB_DEBUG */
+
+        case EventSysSendHFPNumber:
+        {
+            if (g_three_way_active)
+            {
+                /* 重新查询当前通话列表，获取最新状态 */
+                HfpCurrentCallsRequest(hfp_primary_link);
+            }
+        }
+        break;
             
         default :
             MAIN_DEBUG_L1(( "HS : UE unhandled!! [%x]\n", id ));
@@ -4131,8 +4145,82 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
     break ;
 #endif
     case HFP_CURRENT_CALLS_CFM:
+    {
         MAIN_DEBUG_L1(("HS3: HFP_CURRENT_CALLS_CFM [%c]\n",
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
+        
+        bool was_three_way = g_three_way_active;
+        
+        /* 当两个号码都获取到后，发送 IE 命令 */
+        if (strlen(g_current_call_number) > 0 && strlen(g_waiting_call_number) > 0)
+        {
+            char ie_buffer[64];
+            int ie_len;
+            int total_len = strlen(g_current_call_number) + strlen(g_waiting_call_number);
+            ie_len = snprintf(ie_buffer, sizeof(ie_buffer), "IE%2d%s,%s\r\n", total_len, g_waiting_call_number, g_current_call_number);
+            if(ie_len > 0 && ie_len < sizeof(ie_buffer))
+            {
+                uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
+            }
+            g_current_call_number[0] = '\0';
+            g_waiting_call_number[0] = '\0';
+        }
+        
+        /* 检查是否有两个通话 */
+        bool has_two_calls = (strlen(g_active_call_number) > 0 && strlen(g_held_call_number) > 0);
+        
+        if (has_two_calls)
+        {
+            /* 进入或保持三方通话状态 */
+            g_three_way_active = TRUE;
+            /* 发送 IK 命令 */
+            char ik_buffer[64];
+            int ik_len;
+            int total_len_ik = strlen(g_held_call_number) + strlen(g_active_call_number);
+            ik_len = snprintf(ik_buffer, sizeof(ik_buffer), "IK%2d%s,%s\r\n", total_len_ik, g_held_call_number, g_active_call_number);
+            if(ik_len > 0 && ik_len < sizeof(ik_buffer))
+            {
+                uart_data_stream_tx_data((const uint8 *)ik_buffer, ik_len);
+            }
+            /* 启动定时器，1秒后再次查询 */
+            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, D_SEC(1));
+        }
+        else if (was_three_way && !has_two_calls)
+        {
+            /* 退出三方通话，发送 IG 命令 */
+            char ig_buffer[64];
+            int ig_len;
+            char *remaining_number = "";
+            if (strlen(g_active_call_number) > 0)
+            {
+                remaining_number = g_active_call_number;
+            }
+            else if (strlen(g_held_call_number) > 0)
+            {
+                remaining_number = g_held_call_number;
+            }
+            ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
+            if(ig_len > 0 && ig_len < sizeof(ig_buffer))
+            {
+                uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
+            }
+            /* 停止循环发送 */
+            g_three_way_active = FALSE;
+            MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
+            /* 清空所有变量 */
+            g_active_call_number[0] = '\0';
+            g_held_call_number[0] = '\0';
+            g_current_call_number[0] = '\0';
+            g_waiting_call_number[0] = '\0';
+        }
+        else
+        {
+            /* 只有一个通话，清空变量 */
+            g_three_way_active = FALSE;
+            g_active_call_number[0] = '\0';
+            g_held_call_number[0] = '\0';
+        }
+    }
     break ;
     case HFP_CURRENT_CALLS_IND:
     {
@@ -4148,40 +4236,29 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         /* 根据状态存储号码 */
         if (pInd->status == hfp_call_active)
         {
-            /* 状态 0-活跃：当前通话 */
             strncpy(g_current_call_number, (const char *)pInd->number, pInd->size_number);
             g_current_call_number[pInd->size_number] = '\0';
+            strncpy(g_active_call_number, (const char *)pInd->number, pInd->size_number);
+            g_active_call_number[pInd->size_number] = '\0';
         }
         else if (pInd->status == hfp_call_waiting)
         {
-            /* 状态 5-等待：等待接听的通话 */
             strncpy(g_waiting_call_number, (const char *)pInd->number, pInd->size_number);
             g_waiting_call_number[pInd->size_number] = '\0';
         }
+        else if (pInd->status == hfp_call_held)
+        {
+            strncpy(g_held_call_number, (const char *)pInd->number, pInd->size_number);
+            g_held_call_number[pInd->size_number] = '\0';
+        }
 
         out_len = snprintf(output, sizeof(output), "HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\r\n",
-                                        pInd->call_idx , //表示当前通话的序号
-                                        pInd->multiparty  , //0-非多方通话  1-多方通话
-                                        pInd->status); //0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
+                                        pInd->call_idx ,
+                                        pInd->multiparty  ,
+                                        pInd->status);//0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
-        }
-
-        /* 当两个号码都获取到后，发送 IE 命令 */
-        if (strlen(g_current_call_number) > 0 && strlen(g_waiting_call_number) > 0)
-        {
-            char ie_buffer[64];
-            int ie_len;
-            int total_len = strlen(g_current_call_number) + strlen(g_waiting_call_number);
-            ie_len = snprintf(ie_buffer, sizeof(ie_buffer), "IE%2d%s,%s\r\n", total_len, g_waiting_call_number, g_current_call_number);
-            if(ie_len > 0 && ie_len < sizeof(ie_buffer))
-            {
-                uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
-            }
-            /* 发送完后清空全局变量，以备下次使用 */
-            g_current_call_number[0] = '\0';
-            g_waiting_call_number[0] = '\0';
         }
     }
     break;

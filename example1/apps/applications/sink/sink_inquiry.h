@@ -608,5 +608,7 @@ uint16 sinkInquiryGetPeerVersion(void);
 
 #endif /* ENABLE_PEER*/
 
+void inquiryClearPrintedDevices(void);
+
 #endif /* _SINK_INQUIRY_H_ */
 

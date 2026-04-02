@@ -289,12 +289,14 @@ void handle_at_command(recv_t *recv)
         case BLINK_START_DISCOVERY:// "SD"
             // 执行查询操作
             uart_data_stream_tx_data((const uint8*)"QS\r\n", 6);
+            inquiryClearPrintedDevices();
             inquiryStart(0);
             break;
 
         case BLINK_STOP_DISCOVERY:  // "ST"
             // 停止查询操作
             inquiryStop();
+            inquiryClearPrintedDevices();
             uart_data_stream_tx_data((const uint8*)"SH0\r\n", 5);
             break;
 

@@ -715,6 +715,7 @@ typedef enum sinkEventsTag
 
 /*0x480B*/    EventSysVAStopVoiceCapture,
 /*0x480C*/    EventSysSendAtCk01,
+/*0x480D*/    EventSysSendHFPNumber,
               EventSysLast
 
 } sinkEvents_t; 
