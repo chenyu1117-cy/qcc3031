@@ -209,6 +209,11 @@ Copyright (c) 2005 - 2019 Qualcomm Technologies International, Ltd.
 
 #define PS_LOCAL_NAME       (201)
 
+
+#ifndef THREE_WAY_CALLING
+    #define THREE_WAY_CALLING
+#endif
+
 /* Pairing timeout action */
 enum
 {
@@ -218,6 +223,9 @@ enum
 };
 
 void app_handler(Task task, MessageId id, Message message);
+
+char g_current_call_number[32] = {0};  // 存储当前通话的号码
+char g_waiting_call_number[32] = {0};  // 存储等待来电的号码
 
 static void handleHFPStatusCFM ( hfp_lib_status pStatus ) ;
 static void sinkConnectionInit(void);
@@ -4087,16 +4095,17 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
      /*****************************************************************/
 
 #ifdef THREE_WAY_CALLING
-    case HFP_CALL_WAITING_ENABLE_CFM :
-            MAIN_DEBUG_L1(("HS3 : HFP_CALL_WAITING_ENABLE_CFM_T [%c]\n",
-                            TRUE_OR_FALSE(((const HFP_CALL_WAITING_ENABLE_CFM_T * )message)->status == hfp_success)));
-    break ;
     case HFP_CALL_WAITING_IND:
     {
+        HFP_CALL_WAITING_IND_T *pInd = (HFP_CALL_WAITING_IND_T *)message;
+
+        /* 调用 HfpCurrentCallsRequest 获取当前通话列表 */
+        HfpCurrentCallsRequest(pInd->priority);
+
         /* pass the indication to the multipoint handler which will determine if the call waiting tone needs
             to be played, this will depend upon whether the indication has come from the AG with
             the currently routed audio */
-        mpHandleCallWaitingInd((HFP_CALL_WAITING_IND_T *)message);
+        mpHandleCallWaitingInd(pInd);
     }
     break;
 
@@ -4125,22 +4134,54 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         MAIN_DEBUG_L1(("HS3: HFP_CURRENT_CALLS_CFM [%c]\n",
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
     break ;
-        case HFP_CURRENT_CALLS_IND:
+    case HFP_CURRENT_CALLS_IND:
     {
         char output[96];
         int out_len;
-        MAIN_DEBUG(("HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\n" ,
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->call_idx ,
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->multiparty  ,
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->status)) ;
+        const HFP_CURRENT_CALLS_IND_T *pInd = (const HFP_CURRENT_CALLS_IND_T *)message;
 
-        out_len = snprintf(output, sizeof(output), "HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]",
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->call_idx , //表示当前通话的序号
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->multiparty  , //0-非多方通话  1-多方通话
-                                        ((const HFP_CURRENT_CALLS_IND_T*)message)->status); //0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
+        MAIN_DEBUG(("HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\n" ,
+                                        pInd->call_idx ,
+                                        pInd->multiparty  ,
+                                        pInd->status)) ;
+
+        /* 根据状态存储号码 */
+        if (pInd->status == hfp_call_active)
+        {
+            /* 状态 0-活跃：当前通话 */
+            strncpy(g_current_call_number, (const char *)pInd->number, pInd->size_number);
+            g_current_call_number[pInd->size_number] = '\0';
+        }
+        else if (pInd->status == hfp_call_waiting)
+        {
+            /* 状态 5-等待：等待接听的通话 */
+            strncpy(g_waiting_call_number, (const char *)pInd->number, pInd->size_number);
+            g_waiting_call_number[pInd->size_number] = '\0';
+        }
+
+        out_len = snprintf(output, sizeof(output), "HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\r\n",
+                                        pInd->call_idx , //表示当前通话的序号
+                                        pInd->multiparty  , //0-非多方通话  1-多方通话
+                                        pInd->status); //0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
+        }
+
+        /* 当两个号码都获取到后，发送 IE 命令 */
+        if (strlen(g_current_call_number) > 0 && strlen(g_waiting_call_number) > 0)
+        {
+            char ie_buffer[64];
+            int ie_len;
+            int total_len = strlen(g_current_call_number) + strlen(g_waiting_call_number);
+            ie_len = snprintf(ie_buffer, sizeof(ie_buffer), "IE%2d%s,%s\r\n", total_len, g_waiting_call_number, g_current_call_number);
+            if(ie_len > 0 && ie_len < sizeof(ie_buffer))
+            {
+                uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
+            }
+            /* 发送完后清空全局变量，以备下次使用 */
+            g_current_call_number[0] = '\0';
+            g_waiting_call_number[0] = '\0';
         }
     }
     break;

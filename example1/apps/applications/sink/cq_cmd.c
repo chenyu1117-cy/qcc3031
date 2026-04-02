@@ -24,6 +24,9 @@ int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
 uint16 g_current_pair_index = 0;
 uint16 g_total_pair_count = 0;
 
+extern char g_current_call_number[32]; 
+extern char g_waiting_call_number[32];  
+
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
     [BLINK_START_PAIR] = "DB",     //配对:::DB[addr:12]
@@ -333,15 +336,15 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_DELETE_PAIR_LIST:    //"CV"
         {
-            // if (recv->param && strlen(recv->param) > 0)
-            // {
-            //     bdaddr addr;
-            //     if (strToBdaddr(recv->param, &addr))
-            //     {
-            //         deviceManagerRemoveDevice(&addr);
-            //     }
-            // }
-            deviceManagerRemoveAllDevices();
+            if (recv->param && strlen(recv->param) > 0)
+            {
+                bdaddr addr;
+                if (strToBdaddr(recv->param, &addr))
+                {
+                    deviceManagerRemoveDevice(&addr);
+                }
+            }
+            //deviceManagerRemoveAllDevices();
             break;
         }
 
