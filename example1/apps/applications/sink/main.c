@@ -228,8 +228,9 @@ char g_current_call_number[32] = {0};  // 存储当前通话的号码
 char g_waiting_call_number[32] = {0};  // 存储等待来电的号码
 char g_held_call_number[32] = {0};     // 存储后台保持通话号码
 char g_active_call_number[32] = {0};    // 存储当前活动通话号码
-static bool g_three_way_active = FALSE; // 三方通话是否激活
 static bool g_collecting_calls = FALSE;  // 标记是否正在收集通话信息
+static int g_three_way_state = 0;  // 0:初始 1:进入三方未接听 2:正在三方通话 3:退出三方
+static int g_debounce_count = 0;  // 去抖动计数器
 
 static void handleHFPStatusCFM ( hfp_lib_status pStatus ) ;
 static void sinkConnectionInit(void);
@@ -3769,9 +3770,9 @@ static void handleUEMessage  ( Task task, MessageId id, Message message )
 
         case EventSysSendHFPNumber:
         {
-            if (g_three_way_active)
+            if (g_three_way_state == 2)
             {
-                /* 重新查询当前通话列表，获取最新状态 */
+                /* 只有状态2时才重新查询 */
                 HfpCurrentCallsRequest(hfp_primary_link);
             }
         }
@@ -4149,68 +4150,178 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         MAIN_DEBUG_L1(("HS3: HFP_CURRENT_CALLS_CFM [%c]\n",
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
         
-        bool was_three_way = g_three_way_active;
-        bool has_two_calls = (strlen(g_active_call_number) > 0 && strlen(g_held_call_number) > 0);
+        bool has_waiting = (strlen(g_waiting_call_number) > 0);
+        bool has_active = (strlen(g_active_call_number) > 0);
+        bool has_held = (strlen(g_held_call_number) > 0);
+        bool has_current = (strlen(g_current_call_number) > 0);
         
-        /* 当两个号码都获取到后，发送 IE 命令 */
-        if (strlen(g_current_call_number) > 0 && strlen(g_waiting_call_number) > 0)
+        /* 收集所有非waiting的号码 */
+        int non_waiting_count = 0;
+        char *non_waiting_nums[2];
+        if (has_active) { non_waiting_nums[non_waiting_count++] = g_active_call_number; }
+        if (has_held) { non_waiting_nums[non_waiting_count++] = g_held_call_number; }
+        if (has_current && !has_active) { non_waiting_nums[non_waiting_count++] = g_current_call_number; }
+        
+        /* 状态机处理 */
+        switch (g_three_way_state)
         {
-            char ie_buffer[64];
-            int ie_len;
-            int total_len = strlen(g_current_call_number) + strlen(g_waiting_call_number);
-            ie_len = snprintf(ie_buffer, sizeof(ie_buffer), "IE%2d%s,%s\r\n", total_len, g_waiting_call_number, g_current_call_number);
-            if(ie_len > 0 && ie_len < sizeof(ie_buffer))
+            case 0: // 初始状态
             {
-                uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
+                /* 条件：有waiting + 至少1个非waiting → 进入状态1，发送IE */
+                if (has_waiting && non_waiting_count >= 1)
+                {
+                    char ie_buffer[64];
+                    int ie_len;
+                    char *other_num = non_waiting_nums[0];
+                    int total_len = strlen(other_num) + strlen(g_waiting_call_number);
+                    ie_len = snprintf(ie_buffer, sizeof(ie_buffer), "IE%2d%s,%s\r\n", total_len, g_waiting_call_number, other_num);
+                    if(ie_len > 0 && ie_len < sizeof(ie_buffer))
+                    {
+                        uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
+                    }
+                    g_three_way_state = 1;
+                    g_debounce_count = 0;
+                }
+                break;
             }
+            case 1: // 进入三方未接听状态
+            {
+                /* 条件1：有2个非waiting通话 → 进入状态2，发送IK并循环 */
+                if (non_waiting_count >= 2)
+                {
+                    char ik_buffer[64];
+                    int ik_len;
+                    char *num1 = "";
+                    char *num2 = "";
+                    /* 确保held（后台）在前，active（正在通话）在后 */
+                    if (has_active && has_held)
+                    {
+                        num1 = g_held_call_number;
+                        num2 = g_active_call_number;
+                    }
+                    else if (has_active && has_current)
+                    {
+                        num1 = g_current_call_number;
+                        num2 = g_active_call_number;
+                    }
+                    else if (has_held && has_current)
+                    {
+                        num1 = g_held_call_number;
+                        num2 = g_current_call_number;
+                    }
+                    else
+                    {
+                        num1 = non_waiting_nums[0];
+                        num2 = non_waiting_nums[1];
+                    }
+                    int total_len_ik = strlen(num1) + strlen(num2);
+                    ik_len = snprintf(ik_buffer, sizeof(ik_buffer), "IK%2d%s,%s\r\n", total_len_ik, num1, num2);
+                    if(ik_len > 0 && ik_len < sizeof(ik_buffer))
+                    {
+                        uart_data_stream_tx_data((const uint8 *)ik_buffer, ik_len);
+                    }
+                    g_three_way_state = 2;
+                    g_debounce_count = 0;
+                    MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, D_SEC(1));
+                }
+                /* 条件2：没有waiting了且只剩一个通话 → 发送IG，回到状态0 */
+                else if (!has_waiting && non_waiting_count <= 1)
+                {
+                    char ig_buffer[64];
+                    int ig_len;
+                    char *remaining_number = "";
+                    if (non_waiting_count == 1)
+                    {
+                        remaining_number = non_waiting_nums[0];
+                    }
+                    ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
+                    if(ig_len > 0 && ig_len < sizeof(ig_buffer))
+                    {
+                        uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
+                    }
+                    g_three_way_state = 0;
+                    g_debounce_count = 0;
+                }
+                break;
+            }
+            case 2: // 正在三方通话状态
+            {
+                /* 条件：仍有2个非waiting通话 → 继续发送IK，循环，重置去抖动 */
+                if (non_waiting_count >= 2)
+                {
+                    char ik_buffer[64];
+                    int ik_len;
+                    char *num1 = "";
+                    char *num2 = "";
+                    /* 确保held（后台）在前，active（正在通话）在后 */
+                    if (has_active && has_held)
+                    {
+                        num1 = g_held_call_number;
+                        num2 = g_active_call_number;
+                    }
+                    else if (has_active && has_current)
+                    {
+                        num1 = g_current_call_number;
+                        num2 = g_active_call_number;
+                    }
+                    else if (has_held && has_current)
+                    {
+                        num1 = g_held_call_number;
+                        num2 = g_current_call_number;
+                    }
+                    else
+                    {
+                        num1 = non_waiting_nums[0];
+                        num2 = non_waiting_nums[1];
+                    }
+                    int total_len_ik = strlen(num1) + strlen(num2);
+                    ik_len = snprintf(ik_buffer, sizeof(ik_buffer), "IK%2d%s,%s\r\n", total_len_ik, num1, num2);
+                    if(ik_len > 0 && ik_len < sizeof(ik_buffer))
+                    {
+                        uart_data_stream_tx_data((const uint8 *)ik_buffer, ik_len);
+                    }
+                    g_debounce_count = 0;
+                    MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, D_SEC(1));
+                }
+                /* 条件：只剩1个或0个通话 → 进入去抖动，计数 */
+                else
+                {
+                    g_debounce_count++;
+                    /* 去抖动：连续3次检测到都少于2个通话才发送IG */
+                    if (g_debounce_count >= 3)
+                    {
+                        char ig_buffer[64];
+                        int ig_len;
+                        char *remaining_number = "";
+                        if (non_waiting_count == 1)
+                        {
+                            remaining_number = non_waiting_nums[0];
+                        }
+                        ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
+                        if(ig_len > 0 && ig_len < sizeof(ig_buffer))
+                        {
+                            uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
+                        }
+                        g_three_way_state = 0;
+                        g_debounce_count = 0;
+                        MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
+                    }
+                    else
+                    {
+                        /* 还在去抖动中，继续保持状态2，继续查询 */
+                        MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, D_SEC(1));
+                    }
+                }
+                break;
+            }
+            case 3: // 退出三方状态（此状态暂时不用，直接在case2中处理后回到0）
+            default:
+                g_three_way_state = 0;
+                g_debounce_count = 0;
+                MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
+                break;
         }
         
-        if (has_two_calls)
-        {
-            /* 进入或保持三方通话状态 */
-            g_three_way_active = TRUE;
-            /* 发送 IK 命令 */
-            char ik_buffer[64];
-            int ik_len;
-            int total_len_ik = strlen(g_held_call_number) + strlen(g_active_call_number);
-            ik_len = snprintf(ik_buffer, sizeof(ik_buffer), "IK%2d%s,%s\r\n", total_len_ik, g_held_call_number, g_active_call_number);
-            if(ik_len > 0 && ik_len < sizeof(ik_buffer))
-            {
-                uart_data_stream_tx_data((const uint8 *)ik_buffer, ik_len);
-            }
-            /* 启动定时器，1秒后再次查询 */
-            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, D_SEC(1));
-        }
-        else if (was_three_way && !has_two_calls)
-        {
-            /* 退出三方通话，发送 IG 命令 */
-            char ig_buffer[64];
-            int ig_len;
-            char *remaining_number = "";
-            if (strlen(g_active_call_number) > 0)
-            {
-                remaining_number = g_active_call_number;
-            }
-            else if (strlen(g_held_call_number) > 0)
-            {
-                remaining_number = g_held_call_number;
-            }
-            ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
-            if(ig_len > 0 && ig_len < sizeof(ig_buffer))
-            {
-                uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
-            }
-            /* 停止循环发送 */
-            g_three_way_active = FALSE;
-            MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
-        }
-        else
-        {
-            /* 只有一个通话或没有通话 */
-            g_three_way_active = FALSE;
-        }
-        
-        /* 收集完成，重置标志 */
         g_collecting_calls = FALSE;
     }
     break ;
@@ -4262,64 +4373,6 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
         }
-            /* 每次收到CLCC通知后，延迟检查是否应该发送IG */
-    {
-        static bool should_check_ig = FALSE;
-        
-        if (g_three_way_active)
-        {
-            should_check_ig = TRUE;
-        }
-        
-        if (should_check_ig)
-        {
-            bool has_active = (strlen(g_active_call_number) > 0);
-            bool has_held = (strlen(g_held_call_number) > 0);
-            bool has_two = has_active && has_held;
-            
-            if (!has_two && g_three_way_active)
-            {
-                /* 从两个通话变为一个通话，发送IG */
-                char ig_buffer[64];
-                int ig_len;
-                char *remaining_number = "";
-                if (has_active)
-                {
-                    remaining_number = g_active_call_number;
-                }
-                else if (has_held)
-                {
-                    remaining_number = g_held_call_number;
-                }
-                else
-                {
-                    /* 两个都没有，检查是否有当前通话号码 */
-                    if (strlen(g_current_call_number) > 0)
-                    {
-                        remaining_number = g_current_call_number;
-                    }
-                    else if (strlen(g_waiting_call_number) > 0)
-                    {
-                        remaining_number = g_waiting_call_number;
-                    }
-                }
-                
-                ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
-                if(ig_len > 0 && ig_len < sizeof(ig_buffer))
-                {
-                    uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
-                }
-                /* 更新状态标志 */
-                g_three_way_active = FALSE;
-                MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
-                should_check_ig = FALSE;
-            }
-            else if (has_two)
-            {
-                g_three_way_active = TRUE;
-            }
-        }
-    }
     }
     break;
     case HFP_AUDIO_CONNECT_IND:
