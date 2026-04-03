@@ -229,7 +229,7 @@ char g_waiting_call_number[32] = {0};  // 存储等待来电的号码
 char g_held_call_number[32] = {0};     // 存储后台保持通话号码
 char g_active_call_number[32] = {0};    // 存储当前活动通话号码
 static bool g_three_way_active = FALSE; // 三方通话是否激活
-//static bool g_waiting_for_calls_cfm = FALSE;  // 标记是否正在等待通话列表完成
+static bool g_collecting_calls = FALSE;  // 标记是否正在收集通话信息
 
 static void handleHFPStatusCFM ( hfp_lib_status pStatus ) ;
 static void sinkConnectionInit(void);
@@ -4150,6 +4150,7 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
                         TRUE_OR_FALSE(((const HFP_CURRENT_CALLS_CFM_T*)message)->status == hfp_success)));
         
         bool was_three_way = g_three_way_active;
+        bool has_two_calls = (strlen(g_active_call_number) > 0 && strlen(g_held_call_number) > 0);
         
         /* 当两个号码都获取到后，发送 IE 命令 */
         if (strlen(g_current_call_number) > 0 && strlen(g_waiting_call_number) > 0)
@@ -4162,12 +4163,7 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
             {
                 uart_data_stream_tx_data((const uint8 *)ie_buffer, ie_len);
             }
-            g_current_call_number[0] = '\0';
-            g_waiting_call_number[0] = '\0';
         }
-        
-        /* 检查是否有两个通话 */
-        bool has_two_calls = (strlen(g_active_call_number) > 0 && strlen(g_held_call_number) > 0);
         
         if (has_two_calls)
         {
@@ -4207,19 +4203,15 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
             /* 停止循环发送 */
             g_three_way_active = FALSE;
             MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
-            /* 清空所有变量 */
-            g_active_call_number[0] = '\0';
-            g_held_call_number[0] = '\0';
-            g_current_call_number[0] = '\0';
-            g_waiting_call_number[0] = '\0';
         }
         else
         {
-            /* 只有一个通话，清空变量 */
+            /* 只有一个通话或没有通话 */
             g_three_way_active = FALSE;
-            g_active_call_number[0] = '\0';
-            g_held_call_number[0] = '\0';
         }
+        
+        /* 收集完成，重置标志 */
+        g_collecting_calls = FALSE;
     }
     break ;
     case HFP_CURRENT_CALLS_IND:
@@ -4232,6 +4224,16 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
                                         pInd->call_idx ,
                                         pInd->multiparty  ,
                                         pInd->status)) ;
+
+        /* 如果是新的一轮收集，先清空所有变量 */
+        if (!g_collecting_calls)
+        {
+            g_collecting_calls = TRUE;
+            g_current_call_number[0] = '\0';
+            g_waiting_call_number[0] = '\0';
+            g_active_call_number[0] = '\0';
+            g_held_call_number[0] = '\0';
+        }
 
         /* 根据状态存储号码 */
         if (pInd->status == hfp_call_active)
@@ -4255,7 +4257,7 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         out_len = snprintf(output, sizeof(output), "HS3: HFP_CURRENT_CALLS_IND id[%d] mult[%d] status[%d]\r\n",
                                         pInd->call_idx ,
                                         pInd->multiparty  ,
-                                        pInd->status);//0-活跃  1-保持  2-拨号中  3-振铃中  4-来电  5-等待
+                                        pInd->status);
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
