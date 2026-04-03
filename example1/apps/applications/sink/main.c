@@ -4262,6 +4262,64 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
         }
+            /* 每次收到CLCC通知后，延迟检查是否应该发送IG */
+    {
+        static bool should_check_ig = FALSE;
+        
+        if (g_three_way_active)
+        {
+            should_check_ig = TRUE;
+        }
+        
+        if (should_check_ig)
+        {
+            bool has_active = (strlen(g_active_call_number) > 0);
+            bool has_held = (strlen(g_held_call_number) > 0);
+            bool has_two = has_active && has_held;
+            
+            if (!has_two && g_three_way_active)
+            {
+                /* 从两个通话变为一个通话，发送IG */
+                char ig_buffer[64];
+                int ig_len;
+                char *remaining_number = "";
+                if (has_active)
+                {
+                    remaining_number = g_active_call_number;
+                }
+                else if (has_held)
+                {
+                    remaining_number = g_held_call_number;
+                }
+                else
+                {
+                    /* 两个都没有，检查是否有当前通话号码 */
+                    if (strlen(g_current_call_number) > 0)
+                    {
+                        remaining_number = g_current_call_number;
+                    }
+                    else if (strlen(g_waiting_call_number) > 0)
+                    {
+                        remaining_number = g_waiting_call_number;
+                    }
+                }
+                
+                ig_len = snprintf(ig_buffer, sizeof(ig_buffer), "IG%2d%s\r\n", strlen(remaining_number), remaining_number);
+                if(ig_len > 0 && ig_len < sizeof(ig_buffer))
+                {
+                    uart_data_stream_tx_data((const uint8 *)ig_buffer, ig_len);
+                }
+                /* 更新状态标志 */
+                g_three_way_active = FALSE;
+                MessageCancelAll(&theSink.task, EventSysSendHFPNumber);
+                should_check_ig = FALSE;
+            }
+            else if (has_two)
+            {
+                g_three_way_active = TRUE;
+            }
+        }
+    }
     }
     break;
     case HFP_AUDIO_CONNECT_IND:
