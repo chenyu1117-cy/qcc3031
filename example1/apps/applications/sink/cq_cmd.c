@@ -500,6 +500,8 @@ void handle_at_command(recv_t *recv)
                 
                 DEBUG(("DEBUG: psWrite result=%d, name=%s, length=%d\n", result, recv->param, nameLength + 1));
                 uart_data_stream_tx_data((const uint8*)"Local name changed\r\n", 19);
+                uart_data_stream_tx_data((const uint8*)recv->param, nameLength);
+                uart_data_stream_tx_data((const uint8*)"\r\n", 2);
             } 
             else 
             {
@@ -584,11 +586,15 @@ void handle_at_command(recv_t *recv)
         case BLINK_HANG_UP_WAIT_PHONE:    // "CQ"
             //挂断等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_held_reject_waiting, 0);
+            // 延迟后查询当前通话状态以触发IG发送
+            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, 500);
             break;
 
         case BLINK_HANG_UP_CURRENT_ACCEPT_WAIT:    // "CR"
             //挂断当前通话,接听等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_active_accept_other, 0);
+            // 延迟后查询当前通话状态以触发IG发送
+            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, 500);
             break;
 
         case BLINK_HOLD_CURRENT_ACCEPT_WAIT:    // "CS"
