@@ -18,6 +18,7 @@
 #include <bdaddr.h>
 #include "sink_private_data.h"
 #include "sink_hfp_data.h"
+#include <sppc.h>
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
 int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
@@ -499,7 +500,7 @@ void handle_at_command(recv_t *recv)
                 uint16 result = psWrite(PS_LOCAL_NAME, (const void*)recv->param, nameLength + 1);
                 
                 DEBUG(("DEBUG: psWrite result=%d, name=%s, length=%d\n", result, recv->param, nameLength + 1));
-                uart_data_stream_tx_data((const uint8*)"Local name changed\r\n", 19);
+                uart_data_stream_tx_data((const uint8*)"MM", 2);
                 uart_data_stream_tx_data((const uint8*)recv->param, nameLength);
                 uart_data_stream_tx_data((const uint8*)"\r\n", 2);
             } 
@@ -586,15 +587,11 @@ void handle_at_command(recv_t *recv)
         case BLINK_HANG_UP_WAIT_PHONE:    // "CQ"
             //挂断等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_held_reject_waiting, 0);
-            // 延迟后查询当前通话状态以触发IG发送
-            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, 500);
             break;
 
         case BLINK_HANG_UP_CURRENT_ACCEPT_WAIT:    // "CR"
             //挂断当前通话,接听等待来电
             HfpCallHoldActionRequest(hfp_primary_link, hfp_chld_release_active_accept_other, 0);
-            // 延迟后查询当前通话状态以触发IG发送
-            MessageSendLater(&theSink.task, EventSysSendHFPNumber, 0, 500);
             break;
 
         case BLINK_HOLD_CURRENT_ACCEPT_WAIT:    // "CS"
@@ -666,6 +663,24 @@ void handle_at_command(recv_t *recv)
                 MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
             }
             break;
+        
+        case BLINK_CONNECT_SPP_ADDRESS:  // "SP[addr:12]"
+        {
+            bdaddr addr;
+            if (strToBdaddr(recv->param, &addr))
+            {
+                char buffer[32];
+                snprintf(buffer, sizeof(buffer), "IV%s\r\n", recv->param);
+                uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+                // 调用SppConnectRequest建立SPP连接
+                SppConnectRequest(sinkGetMainTask(), &addr, 0, 0);
+            }
+            else
+            {
+                uart_data_stream_tx_data((const uint8*)"SPP connect failed\r\n", 20);
+            }
+            break;
+        }
 
 
             // ... 添加其他命令处理

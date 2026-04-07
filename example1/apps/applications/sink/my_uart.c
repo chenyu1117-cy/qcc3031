@@ -10,6 +10,7 @@
 #include "my_uart.h"
 #include "cq_cmd.h"  // 包含AT命令头文件
 #include "sink_events.h"
+#include "my_ps.h"
 
 #ifdef DEBUG_UART
 #define UART_DEBUG(x)               DEBUG(x)
@@ -22,6 +23,8 @@
 #define PIO2BANK(pio) ((uint16)((pio) / 32))
 #define PIO2MASK(pio) (1UL << ((pio) % 32))
 UARTStreamTaskData theUARTStreamTask;
+
+#define PS_LOCAL_NAME       (201)
 
 // 声明静态函数
 static void parse_and_handle_line(const char *line, uint16 len);
@@ -192,6 +195,13 @@ void uart_data_stream_rx_data(Source src)
                         theUARTStreamTask.at_ck01_sending = FALSE;
                         MessageCancelAll(&theUARTStreamTask.task, EventSysSendAtCk01);
                         uart_data_stream_tx_data((const uint8*)"IS\r\n", 7);
+                        char stored_name[32] = {0};
+                        psRead(PS_LOCAL_NAME, stored_name, sizeof(stored_name));
+                        uart_data_stream_tx_data((const uint8*)"MM", 2);
+                        uart_data_stream_tx_data((const uint8*)stored_name, strlen(stored_name));
+                        uart_data_stream_tx_data((const uint8*)"\r\n", 2);
+
+                        uart_data_stream_tx_data((const uint8*)"DB00025B00FF01\r\n", 18);
                     }
 
                     uart_data_stream_tx_data((const uint8*)"AT+ACK\r\n", 9);

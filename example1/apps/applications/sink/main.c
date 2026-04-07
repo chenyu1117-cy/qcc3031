@@ -382,6 +382,9 @@ static void handleCLMessage ( Task task, MessageId id, Message message )
                 MAIN_DEBUG(("DEBUG: psRead success, bytes=%d, name=%s\n", bytes_read, stored_name));
                 ConnectionChangeLocalName(strlen(stored_name), (const uint8*)stored_name);
                 // 重新写入 EIR 数据以更新名称
+                uart_data_stream_tx_data((const uint8*)"MM", 2);
+                uart_data_stream_tx_data((const uint8*)stored_name, strlen(stored_name));
+                uart_data_stream_tx_data((const uint8*)"\r\n", 2);
                 sinkWriteEirData((const CL_DM_LOCAL_NAME_COMPLETE_T*)message);
             }
             else
