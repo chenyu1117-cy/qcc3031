@@ -952,9 +952,9 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
 #endif
 
     const uint8 *lSource = SourceMap(pMsg->src);
-    uint8 *temp_buffer = NULL;
     const uint8 *parse_data = lSource;
     uint16 parse_len = pMsg->dataLen;
+    uint8 concat_buffer[256];
 
     PBAP_DEBUG(("pbap_remain_len before: %d\n", pbap_remain_len));
     
@@ -962,15 +962,15 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
     if (pbap_remain_len > 0 && lSource && pMsg->dataLen > 0)
     {
         uint16 total_len = pbap_remain_len + pMsg->dataLen;
-        temp_buffer = (uint8 *)PanicUnlessMalloc(total_len);
-        if (temp_buffer)
+        if (total_len <= sizeof(concat_buffer))
         {
-            memcpy(temp_buffer, pbap_remain_buffer, pbap_remain_len);
-            memcpy(temp_buffer + pbap_remain_len, lSource, pMsg->dataLen);
-            parse_data = temp_buffer;
+            memcpy(concat_buffer, pbap_remain_buffer, pbap_remain_len);
+            memcpy(concat_buffer + pbap_remain_len, lSource, pMsg->dataLen);
+            parse_data = concat_buffer;
             parse_len = total_len;
+            pbap_remain_len = 0;
+            PBAP_DEBUG(("Concatenated: %d + %d = %d\n", pbap_remain_len, pMsg->dataLen, total_len));
         }
-        pbap_remain_len = 0;
     }
     else if (pbap_remain_len > 0)
     {
@@ -1025,20 +1025,17 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
                 PBAP_DEBUG(("last_begin found, checking for END:VCARD...\n"));
                 /* 没有 END:VCARD，缓存这段不完整的 */
                 uint16 remain_len = (uint16)(parse_data + parse_len - last_begin);
-                if (remain_len > 0 && remain_len < PBAP_REMAIN_BUFFER_SIZE)
+                if (remain_len > 0)
                 {
-                    memcpy(pbap_remain_buffer, last_begin, remain_len);
-                    pbap_remain_len = remain_len;
+                    uint16 save_len = (remain_len < PBAP_REMAIN_BUFFER_SIZE) ? remain_len : PBAP_REMAIN_BUFFER_SIZE;
+                    memcpy(pbap_remain_buffer, last_begin, save_len);
+                    pbap_remain_len = save_len;
                     PBAP_DEBUG(("Saved to buffer, remain_len: %d\n", pbap_remain_len));
                 }
             }
         }
     }
     
-    if (temp_buffer)
-    {
-        free(temp_buffer);
-    }
 
     /* 根据状态决定后续操作 */
     if (pMsg->status == pbapc_pending)
@@ -1054,23 +1051,23 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
         uart_data_stream_tx_data((const uint8*)"PC\r\n", 4);
         uart_data_stream_tx_data((const uint8*)"PE\r\n", 4);        
         pbapSetCommand(pbapc_action_idle);
+        /* 处理最后缓存的不完整数据 */
+        if (pbap_remain_len > 0)
+        {
+            pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
+            uint8 activePb = pbapGetActivePhonebook();
+            if (activePb == pbap_och)
+                type = PBAP_TYPE_OCH;
+            else if (activePb == pbap_ich)
+                type = PBAP_TYPE_ICH;
+            else if (activePb == pbap_mch)
+                type = PBAP_TYPE_MCH;
+            
+            parseAndStoreVcard(pbap_remain_buffer, pbap_remain_len, type);
+            pbap_remain_len = 0;
+        }
     }
 
-    /* 处理最后缓存的不完整数据 */
-    if (pbap_remain_len > 0)
-    {
-        pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
-        uint8 activePb = pbapGetActivePhonebook();
-        if (activePb == pbap_och)
-            type = PBAP_TYPE_OCH;
-        else if (activePb == pbap_ich)
-            type = PBAP_TYPE_ICH;
-        else if (activePb == pbap_mch)
-            type = PBAP_TYPE_MCH;
-        
-        parseAndStoreVcard(pbap_remain_buffer, pbap_remain_len, type);
-        pbap_remain_len = 0;
-    }
 }
 
 /****************************************************************************
@@ -1266,11 +1263,56 @@ static uint16 VcardFindDate(const uint8 *start, const uint8 *end, uint8 **pDate)
         (*pDate) += 1;
         endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
     }
-    else if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-IRMC-CALL-DATETIME", 21)) != NULL) &&
-       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
+    else if(((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-IRMC-CALL-DATETIME", 21)) != NULL)
     {
-        (*pDate) += 1;
-        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
+        // 先找到这一行的结尾
+        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate));
+        if(endstring == NULL)
+        {
+            endstring = (uint8 *)end;
+        }
+        
+        // 从这一行的结尾往前找最后一个冒号
+        uint8 *last_colon = NULL;
+        uint8 *scan = (uint8 *)(*pDate);
+        while(scan < endstring)
+        {
+            if(*scan == ':')
+            {
+                last_colon = scan;
+            }
+            scan++;
+        }
+        
+        if(last_colon != NULL)
+        {
+            (*pDate) = last_colon + 1;
+            // 设置 endstring 为换行符或回车符前的位置
+            uint8 *temp_end = endstring;
+            // 先去掉换行符
+            if(temp_end > (uint8 *)(*pDate) && *temp_end == '\n')
+            {
+                temp_end--;
+            }
+            // 再去掉回车符
+            if(temp_end > (uint8 *)(*pDate) && *temp_end == '\r')
+            {
+                temp_end--;
+            }
+            // 确保 temp_end 指向有效位置
+            if(temp_end >= (uint8 *)(*pDate))
+            {
+                endstring = temp_end;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            return 0;
+        }
     }
     else if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"REV", 3)) != NULL) &&
        (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
@@ -1548,7 +1590,7 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
             
             if (nameLen > 0 && pName)
             {
-                uint8 temp_name[256];
+                uint8 temp_name[128];
                 uint16 i;
                 for (i = 0; i < nameLen && i < 255; i++)
                 {
@@ -1576,7 +1618,7 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
             
             if (nameLen > 0 && pName)
             {
-                uint8 temp_name[256];
+                uint8 temp_name[128];
                 uint16 i;
                 for (i = 0; i < nameLen && i < 255; i++)
                 {
