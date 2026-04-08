@@ -22,11 +22,13 @@
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
 int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
+uint8 first_device_flag = 0;
 uint16 g_current_pair_index = 0;
 uint16 g_total_pair_count = 0;
 
 extern char g_current_call_number[32]; 
 extern char g_waiting_call_number[32];  
+extern bool pbap_is_phonebook;
 
 char* default_commands[BLINK_CMD_NUM] = {
     [BLINK_COMMAND_HEAD] = "AT-",
@@ -290,7 +292,9 @@ void handle_at_command(recv_t *recv)
         case BLINK_START_DISCOVERY:// "SD"
             // 执行查询操作
             uart_data_stream_tx_data((const uint8*)"QS\r\n", 6);
+            first_device_flag = 1;
             inquiryClearPrintedDevices();
+            is_inquiry_mode = 0;
             inquiryStart(0);
             break;
 
@@ -616,6 +620,7 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_SET_SIM_PHONE_BOOK:    // "PA"
             //读取手机电话本
+            pbap_is_phonebook = TRUE;
             uart_data_stream_tx_data((const uint8*)"PA\r\n", 4);
             if (pbapConnect(hfp_primary_link)) 
             { 
@@ -627,6 +632,7 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_SET_OUT_GOING_CALLLOG:    // "PH"
             //读取已拨通话记录
+            pbap_is_phonebook = FALSE;
             if (pbapConnect(hfp_primary_link)) 
             { 
                 pbapSetActivePhonebook(pbap_och);
@@ -636,6 +642,7 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_SET_INCOMING_CALLLOG:    // "PI"
             //读取已接通话记录
+            pbap_is_phonebook = FALSE;
             if (pbapConnect(hfp_primary_link)) 
             { 
                 pbapSetActivePhonebook(pbap_ich);
@@ -645,6 +652,7 @@ void handle_at_command(recv_t *recv)
 
         case BLINK_SET_MISSED_CALLLOG:    // "PJ"
             //读取未接通话记录
+            pbap_is_phonebook = FALSE;
             if (pbapConnect(hfp_primary_link)) 
             { 
                 pbapSetActivePhonebook(pbap_mch);

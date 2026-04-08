@@ -244,6 +244,9 @@ extern void _init(void);
 static void IndicateEvent(MessageId id);
 static bool voiceDialProcessEvent(hfp_link_priority hfp_link);
 
+extern uint8 first_device_flag;
+
+
 /*************************************************************************
 NAME
     sinkSend
@@ -5245,6 +5248,12 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
         if (out_len > 0 && out_len < sizeof(output))
         {
             uart_data_stream_tx_data((const uint8 *)output, out_len);
+            // 如果是第一个设备，再发送一遍
+            if (first_device_flag)
+            {
+                first_device_flag = 0;
+                uart_data_stream_tx_data((const uint8 *)output, out_len);
+            }
         }
     }
     else if(is_inquiry_mode==1)

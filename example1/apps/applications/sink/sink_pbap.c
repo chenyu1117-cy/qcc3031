@@ -63,6 +63,7 @@ static const char gpbapdate[] = "X-IRMC-CALL-DATETIME";
 #define PBAP_REMAIN_BUFFER_SIZE 128
 static uint8 pbap_remain_buffer[PBAP_REMAIN_BUFFER_SIZE];
 static uint16 pbap_remain_len = 0;
+bool pbap_is_phonebook = FALSE;  // true=电话本, false=通话记录
 
 typedef struct 
 {
@@ -1049,8 +1050,14 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
         PBAP_DEBUG(("    Requesting complete.\n"));
         PbapcPullComplete(pMsg->device_id);
         linkPolicyPhonebookAccessComplete(PbapcGetSink(pbapGetActiveLink()));
-        uart_data_stream_tx_data((const uint8*)"PC\r\n", 4);
-        uart_data_stream_tx_data((const uint8*)"PE\r\n", 4);        
+        if (pbap_is_phonebook)
+        {
+            uart_data_stream_tx_data((const uint8*)"PC\r\n", 4);
+        }
+        else
+        {
+            uart_data_stream_tx_data((const uint8*)"PE\r\n", 4);
+        }      
         pbapSetCommand(pbapc_action_idle);
         /* 处理最后缓存的不完整数据 */
         if (pbap_remain_len > 0)
@@ -1326,26 +1333,19 @@ static uint8 VcardGetFirstTel(const uint8* pVcard, const uint16 vcardLen, pbapMe
                 if(nameLen)
                 {
                     /* This memory should be freed after pbap dial command or Audio Prompt has completed */
-                    memmove(&((*pMetaData)->pName), pName, nameLen);
-                    (*pMetaData)->pName[nameLen] = '\0';
-                
-                    /* Remove the ';' between names */
-                    /* Based on PBAP spec., the name format is: 
-                      LastName;FirstName;MiddleName;Prefix;Suffix
-                    */
-                    len = nameLen;
-                    pName = (*pMetaData)->pName;
-                    while(pName < (*pMetaData)->pName + nameLen)
+                    uint8 temp_name[128];
+                    uint16 i, j = 0;
+                    for (i = 0; i < nameLen && j < 127; i++)
                     {
-                        pName    = (uint8 *)memchr(pName, ';', len) ;
-                        /*if no ; is found exit */                            
-                        if(!pName)
-                            break;
-                        *pName++ = ' ';
-                        /* determine how many characters are left */
-                        len = nameLen - (uint16)(pName - (*pMetaData)->pName);
+                        if (pName[i] != ';')
+                        {
+                            temp_name[j++] = pName[i];
+                        }
                     }
-                
+                    memmove(&((*pMetaData)->pName), temp_name, j);
+                    (*pMetaData)->pName[j] = '\0';
+                    (*pMetaData)->nameLen = (uint8)j;  // 更新名字长度
+
                     PBAP_DEBUG(("VcardGetFirstTel:CallerID found ok\n"));
                 }
 
@@ -1525,8 +1525,20 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         
         if (type == PBAP_TYPE_PHONEBOOK)
         {
+            uint16 actual_name_len = 0;
+            if (nameLen > 0 && pName)
+            {
+                uint16 i;
+                for (i = 0; i < nameLen; i++)
+                {
+                    if (pName[i] != ';')
+                    {
+                        actual_name_len++;
+                    }
+                }
+            }
             char header[64];
-            int header_len = snprintf(header, sizeof(header), "PB%02d%02d", nameLen, telLen);
+            int header_len = snprintf(header, sizeof(header), "PB%02d%02d", actual_name_len, telLen);
             if (header_len > 0)
             {
                 uart_data_stream_tx_data((const uint8*)header, header_len);
@@ -1535,13 +1547,15 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
             if (nameLen > 0 && pName)
             {
                 uint8 temp_name[128];
-                uint16 i;
-                for (i = 0; i < nameLen && i < 255; i++)
+                uint16 i, j = 0;
+                for (i = 0; i < nameLen && j < 127; i++)
                 {
-                    temp_name[i] = (pName[i] == ';') ? ' ' : pName[i];
+                    if (pName[i] != ';')
+                    {
+                        temp_name[j++] = pName[i];
+                    }
                 }
-                temp_name[i] = '\0';
-                uart_data_stream_tx_data(temp_name, i);
+                uart_data_stream_tx_data(temp_name, j);
             }
             
             if (telLen > 0 && pTel)
@@ -1553,8 +1567,20 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         }
         else
         {
+            uint16 actual_name_len = 0;
+            if (nameLen > 0 && pName)
+            {
+                uint16 i;
+                for (i = 0; i < nameLen; i++)
+                {
+                    if (pName[i] != ';')
+                    {
+                        actual_name_len++;
+                    }
+                }
+            }
             char header[64];
-            int header_len = snprintf(header, sizeof(header), "PD%c%02d%02d%02d", '0' + callType,nameLen, telLen, dateLen);
+            int header_len = snprintf(header, sizeof(header), "PD%c%02d%02d%02d", '0' + callType,actual_name_len, telLen, dateLen);
             if (header_len > 0)
             {
                 uart_data_stream_tx_data((const uint8*)header, header_len);
@@ -1563,15 +1589,17 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
             if (nameLen > 0 && pName)
             {
                 uint8 temp_name[128];
-                uint16 i;
-                for (i = 0; i < nameLen && i < 255; i++)
+                uint16 i, j = 0;
+                for (i = 0; i < nameLen && j < 127; i++)
                 {
-                    temp_name[i] = (pName[i] == ';') ? ' ' : pName[i];
+                    if (pName[i] != ';')
+                    {
+                        temp_name[j++] = pName[i];
+                    }
                 }
-                temp_name[i] = '\0';
-                uart_data_stream_tx_data(temp_name, i);
+                uart_data_stream_tx_data(temp_name, j);
             }
-            
+                        
             if (telLen > 0 && pTel)
             {
                 uart_data_stream_tx_data(pTel, telLen);
