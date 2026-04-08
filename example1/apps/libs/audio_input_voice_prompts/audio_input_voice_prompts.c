@@ -66,13 +66,13 @@ static void handleAudioMessage ( Task task , MessageId id, Message message )
     {
         case (AUDIO_PLUGIN_PLAY_AUDIO_PROMPT_MSG ):
         {
-            const AUDIO_PLUGIN_PLAY_AUDIO_PROMPT_MSG_T * prompt_message = (const AUDIO_PLUGIN_PLAY_AUDIO_PROMPT_MSG_T *)message ;
+            // const AUDIO_PLUGIN_PLAY_AUDIO_PROMPT_MSG_T * prompt_message = (const AUDIO_PLUGIN_PLAY_AUDIO_PROMPT_MSG_T *)message ;
 
-            AudioInputVoicePromptsPluginPlayPhrase(prompt_message->prompt_index,
-                                                   prompt_message->prompt_header_index,
-                                                   prompt_message->ap_volume, /* Here its used for playing audio without DSP */
-                                                   prompt_message->features,
-                                                   prompt_message->app_task);
+            // AudioInputVoicePromptsPluginPlayPhrase(prompt_message->prompt_index,
+            //                                        prompt_message->prompt_header_index,
+            //                                        prompt_message->ap_volume, /* Here its used for playing audio without DSP */
+            //                                        prompt_message->features,
+            //                                        prompt_message->app_task);
 
         }
         break ;
