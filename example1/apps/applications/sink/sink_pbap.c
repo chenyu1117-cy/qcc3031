@@ -59,6 +59,7 @@ static const char gpbapbegin[] = "BEGIN:VCARD";
 static const char gpbapname[]  = "\nN";
 static const char gpbaptel[]   = "TEL";
 static const char gpbapend[]   = "END:VCARD";
+static const char gpbapdate[] = "X-IRMC-CALL-DATETIME";
 #define PBAP_REMAIN_BUFFER_SIZE 128
 static uint8 pbap_remain_buffer[PBAP_REMAIN_BUFFER_SIZE];
 static uint16 pbap_remain_len = 0;
@@ -1252,70 +1253,13 @@ static uint16 VcardFindDate(const uint8 *start, const uint8 *end, uint8 **pDate)
     uint16 len;
     const uint8 *p = start;
     uint8 *endstring = NULL;
-       
+
     PBAP_DEBUG(("PBAP VcardFindDate\n"));
 
     len = (uint16)(end - p);
-    
-    if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-CALL-DATE", 12)) != NULL) &&
-       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
-    {
-        (*pDate) += 1;
-        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
-    }
-    else if(((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"X-IRMC-CALL-DATETIME", 21)) != NULL)
-    {
-        // 先找到这一行的结尾
-        endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate));
-        if(endstring == NULL)
-        {
-            endstring = (uint8 *)end;
-        }
-        
-        // 从这一行的结尾往前找最后一个冒号
-        uint8 *last_colon = NULL;
-        uint8 *scan = (uint8 *)(*pDate);
-        while(scan < endstring)
-        {
-            if(*scan == ':')
-            {
-                last_colon = scan;
-            }
-            scan++;
-        }
-        
-        if(last_colon != NULL)
-        {
-            (*pDate) = last_colon + 1;
-            // 设置 endstring 为换行符或回车符前的位置
-            uint8 *temp_end = endstring;
-            // 先去掉换行符
-            if(temp_end > (uint8 *)(*pDate) && *temp_end == '\n')
-            {
-                temp_end--;
-            }
-            // 再去掉回车符
-            if(temp_end > (uint8 *)(*pDate) && *temp_end == '\r')
-            {
-                temp_end--;
-            }
-            // 确保 temp_end 指向有效位置
-            if(temp_end >= (uint8 *)(*pDate))
-            {
-                endstring = temp_end;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-        else
-        {
-            return 0;
-        }
-    }
-    else if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)"REV", 3)) != NULL) &&
-       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':',  end - (*pDate))) != NULL))
+
+    if((((*pDate) = (uint8 *)memstr(p, len, (const uint8 *)gpbapdate, (uint16)strlen(gpbapdate))) != NULL) &&
+       (((*pDate) = (uint8 *)memchr((uint8 *)(*pDate), ':', end - (*pDate))) != NULL))
     {
         (*pDate) += 1;
         endstring = (uint8 *)memchr((uint8 *)(*pDate), '\n', end - (*pDate)) - 1;
@@ -1324,8 +1268,8 @@ static uint16 VcardFindDate(const uint8 *start, const uint8 *end, uint8 **pDate)
     {
         return 0;
     }
-    
-    return (uint16)(endstring - (*pDate));
+
+    return(uint16)(endstring - (*pDate));
 }
 
 static uint8 VcardGetFirstTel(const uint8* pVcard, const uint16 vcardLen, pbapMetaData **pMetaData)
@@ -1581,7 +1525,7 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         
         if (type == PBAP_TYPE_PHONEBOOK)
         {
-            char header[32];
+            char header[64];
             int header_len = snprintf(header, sizeof(header), "PB%02d%02d", nameLen, telLen);
             if (header_len > 0)
             {
@@ -1610,7 +1554,7 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         else
         {
             char header[64];
-            int header_len = snprintf(header, sizeof(header), "PD%c%02d%02d%02d", '0' + callType, nameLen, telLen, dateLen);
+            int header_len = snprintf(header, sizeof(header), "PD%c%02d%02d%02d", '0' + callType,nameLen, telLen, dateLen);
             if (header_len > 0)
             {
                 uart_data_stream_tx_data((const uint8*)header, header_len);
