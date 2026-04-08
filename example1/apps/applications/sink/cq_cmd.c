@@ -621,9 +621,6 @@ void handle_at_command(recv_t *recv)
             { 
                 pbapSetActivePhonebook(pbap_pb); 
                 pbapSetCommand(pbapc_downloading); 
-                
-                // 延迟发送拉取请求
-                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
             }
 
             break;
@@ -634,9 +631,6 @@ void handle_at_command(recv_t *recv)
             { 
                 pbapSetActivePhonebook(pbap_och);
                 pbapSetCommand(pbapc_downloading);
-                
-                // 延迟发送拉取请求
-                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
             }
             break;
 
@@ -646,9 +640,6 @@ void handle_at_command(recv_t *recv)
             { 
                 pbapSetActivePhonebook(pbap_ich);
                 pbapSetCommand(pbapc_downloading);
-                
-                // 延迟发送拉取请求
-                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
             }
             break;
 
@@ -658,9 +649,6 @@ void handle_at_command(recv_t *recv)
             { 
                 pbapSetActivePhonebook(pbap_mch);
                 pbapSetCommand(pbapc_downloading);
-                
-                // 延迟发送拉取请求
-                MessageSendLater(&theSink.task, PBAPC_APP_PULL_PHONE_BOOK, 0, 500); 
             }
             break;
         

@@ -59,6 +59,9 @@ static const char gpbapbegin[] = "BEGIN:VCARD";
 static const char gpbapname[]  = "\nN";
 static const char gpbaptel[]   = "TEL";
 static const char gpbapend[]   = "END:VCARD";
+#define PBAP_REMAIN_BUFFER_SIZE 128
+static uint8 pbap_remain_buffer[PBAP_REMAIN_BUFFER_SIZE];
+static uint16 pbap_remain_len = 0;
 
 typedef struct 
 {
@@ -112,6 +115,8 @@ static void handlePbapRetrievedData(const uint8 *pVcard, const uint16 vcardLen);
 static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status status, const uint8 *lSource, const uint16 dataLen);
 static void pbapDial(uint8 phonebook);
 static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_type_t type);
+
+static uint8 *memstr( const uint8 *buffer, const uint16 buffer_size, const uint8 *str, const uint16 count );
 
 /* Sink PBAP global data */
 typedef struct __sink_pbap_global_data_t
@@ -946,23 +951,93 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
     }
 #endif
 
-    /* 如果当前数据包有数据，立即解析并发送 */
-    if (pMsg->dataLen > 0 && pMsg->src != NULL)
+    const uint8 *lSource = SourceMap(pMsg->src);
+    uint8 *temp_buffer = NULL;
+    const uint8 *parse_data = lSource;
+    uint16 parse_len = pMsg->dataLen;
+
+    PBAP_DEBUG(("pbap_remain_len before: %d\n", pbap_remain_len));
+    
+    /* 如果有缓存的不完整数据，拼接到新数据前面 */
+    if (pbap_remain_len > 0 && lSource && pMsg->dataLen > 0)
     {
-        const uint8 *lSource = SourceMap(pMsg->src);
-        if (lSource)
+        uint16 total_len = pbap_remain_len + pMsg->dataLen;
+        temp_buffer = (uint8 *)PanicUnlessMalloc(total_len);
+        if (temp_buffer)
         {
-            pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
-            uint8 activePb = pbapGetActivePhonebook();
-            if (activePb == pbap_och)
-                type = PBAP_TYPE_OCH;
-            else if (activePb == pbap_ich)
-                type = PBAP_TYPE_ICH;
-            else if (activePb == pbap_mch)
-                type = PBAP_TYPE_MCH;
-            
-            parseAndStoreVcard(lSource, pMsg->dataLen, type);
+            memcpy(temp_buffer, pbap_remain_buffer, pbap_remain_len);
+            memcpy(temp_buffer + pbap_remain_len, lSource, pMsg->dataLen);
+            parse_data = temp_buffer;
+            parse_len = total_len;
         }
+        pbap_remain_len = 0;
+    }
+    else if (pbap_remain_len > 0)
+    {
+        /* 只有缓存数据（最后一个包），直接解析 */
+        parse_data = pbap_remain_buffer;
+        parse_len = pbap_remain_len;
+    }
+    
+    /* 解析数据 */
+    if (parse_len > 0 && parse_data)
+    {
+        pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
+        uint8 activePb = pbapGetActivePhonebook();
+        if (activePb == pbap_och)
+            type = PBAP_TYPE_OCH;
+        else if (activePb == pbap_ich)
+            type = PBAP_TYPE_ICH;
+        else if (activePb == pbap_mch)
+            type = PBAP_TYPE_MCH;
+        
+        parseAndStoreVcard(parse_data, parse_len, type);
+        PBAP_DEBUG(("parseAndStoreVcard done, parse_len: %d\n", parse_len));
+        
+        /* 查找最后一个 BEGIN:VCARD，看看后面有没有 END:VCARD */
+        const uint8 *last_begin = NULL;
+        const uint8 *p = parse_data;
+        uint16 remaining = parse_len;
+        while (1)
+        {
+            const uint8 *found = memstr(p, remaining, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
+            if (found)
+            {
+                last_begin = found;
+                p = found + strlen(gpbapbegin);
+                remaining = (uint16)(parse_data + parse_len - p);
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        if (last_begin)
+        {
+            /* 看看这个 BEGIN:VCARD 后面有没有 END:VCARD */
+            const uint8 *search_end_start = last_begin + strlen(gpbapbegin);
+            uint16 search_end_len = (uint16)(parse_data + parse_len - search_end_start);
+            const uint8 *end = memstr(search_end_start, search_end_len, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
+            
+            if (!end)
+            {
+                PBAP_DEBUG(("last_begin found, checking for END:VCARD...\n"));
+                /* 没有 END:VCARD，缓存这段不完整的 */
+                uint16 remain_len = (uint16)(parse_data + parse_len - last_begin);
+                if (remain_len > 0 && remain_len < PBAP_REMAIN_BUFFER_SIZE)
+                {
+                    memcpy(pbap_remain_buffer, last_begin, remain_len);
+                    pbap_remain_len = remain_len;
+                    PBAP_DEBUG(("Saved to buffer, remain_len: %d\n", pbap_remain_len));
+                }
+            }
+        }
+    }
+    
+    if (temp_buffer)
+    {
+        free(temp_buffer);
     }
 
     /* 根据状态决定后续操作 */
@@ -979,6 +1054,22 @@ static void handlePullPhonebookCfm(const PBAPC_PULL_PHONEBOOK_CFM_T *pMsg)
         uart_data_stream_tx_data((const uint8*)"PC\r\n", 4);
         uart_data_stream_tx_data((const uint8*)"PE\r\n", 4);        
         pbapSetCommand(pbapc_action_idle);
+    }
+
+    /* 处理最后缓存的不完整数据 */
+    if (pbap_remain_len > 0)
+    {
+        pbap_entry_type_t type = PBAP_TYPE_PHONEBOOK;
+        uint8 activePb = pbapGetActivePhonebook();
+        if (activePb == pbap_och)
+            type = PBAP_TYPE_OCH;
+        else if (activePb == pbap_ich)
+            type = PBAP_TYPE_ICH;
+        else if (activePb == pbap_mch)
+            type = PBAP_TYPE_MCH;
+        
+        parseAndStoreVcard(pbap_remain_buffer, pbap_remain_len, type);
+        pbap_remain_len = 0;
     }
 }
 
@@ -1040,6 +1131,7 @@ static void handleAppPullVcardList(void)
 
 static void handleAppPullPhoneBook(void)
 {
+    pbap_remain_len = 0;
     PBAP_DEBUG(("PBAPC_APP_PULL_PHONE_BOOK, "));
     if(pbapGetActiveLink() != pbapc_invalid_link)
     {
@@ -1399,13 +1491,28 @@ static void handleVcardPhoneBookMessage(uint16 device_id, pbapc_lib_status statu
 
 static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_type_t type)
 {
-    const uint8 *start = memstr(pVcard, vcardLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
-    const uint8 *end = memstr(pVcard, vcardLen, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
     const uint8 *pNextStart = pVcard;
     uint16 remainingLen = vcardLen;
     
-    while (start && end && start < end)
+    while (remainingLen > 0)
     {
+        const uint8 *start = memstr(pNextStart, remainingLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
+        if (!start)
+        {
+            break;
+        }
+        
+        const uint8 *search_end_start = start + strlen(gpbapbegin);
+        uint16 search_end_len = (uint16)(pVcard + vcardLen - search_end_start);
+        const uint8 *end = memstr(search_end_start, search_end_len, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
+        
+        if (!end)
+        {
+            pNextStart = start + strlen(gpbapbegin);
+            remainingLen = (uint16)(pVcard + vcardLen - pNextStart);
+            continue;
+        }
+        
         uint8 *pTel = NULL;
         uint8 *pName = NULL;
         uint8 *pDate = NULL;
@@ -1414,14 +1521,14 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         uint16 dateLen = 0;
         uint8 callType = 0;
         
-        start = start + strlen(gpbapbegin);
+        const uint8 *vcard_data_start = start + strlen(gpbapbegin);
         
-        telLen = VcardFindMetaData(start, end, &pTel, gpbaptel, (const uint16)strlen(gpbaptel));
-        nameLen = VcardFindMetaData(start, end, &pName, gpbapname, (const uint16)strlen(gpbapname));
+        telLen = VcardFindMetaData(vcard_data_start, end, &pTel, gpbaptel, (const uint16)strlen(gpbaptel));
+        nameLen = VcardFindMetaData(vcard_data_start, end, &pName, gpbapname, (const uint16)strlen(gpbapname));
         
         if (type != PBAP_TYPE_PHONEBOOK)
         {
-            dateLen = VcardFindDate(start, end, &pDate);
+            dateLen = VcardFindDate(vcard_data_start, end, &pDate);
             if (type == PBAP_TYPE_OCH)
                 callType = 4;
             else if (type == PBAP_TYPE_ICH)
@@ -1494,8 +1601,6 @@ static void parseAndStoreVcard(const uint8 *pVcard, uint16 vcardLen, pbap_entry_
         
         pNextStart = end + strlen(gpbapend);
         remainingLen = (uint16)(pVcard + vcardLen - pNextStart);
-        start = memstr(pNextStart, remainingLen, (const uint8 *)gpbapbegin, (uint16)strlen(gpbapbegin));
-        end = memstr(pNextStart, remainingLen, (const uint8 *)gpbapend, (uint16)strlen(gpbapend));
     }
 }
 #endif /*ENABLE_PBAP*/
