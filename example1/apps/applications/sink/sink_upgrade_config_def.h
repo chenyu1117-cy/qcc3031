@@ -26,7 +26,7 @@ typedef struct {
     unsigned short enable_app_config_reset:1;
 } upgrade_config_t;
 
-#define SINK_UPGRADE_READONLY_CONFIG_BLK_ID 1171
+#define SINK_UPGRADE_READONLY_CONFIG_BLK_ID 1274
 
 typedef struct {
     upgrade_config_t upgrade_config;

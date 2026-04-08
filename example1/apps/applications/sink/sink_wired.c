@@ -47,7 +47,6 @@ NOTES
 
 #ifdef ENABLE_WIRED
 
-
 #include <audio_plugin_music_params.h>
 #include <audio_plugin_music_variants.h>
 #include <audio_plugin_output_variants.h>
@@ -223,7 +222,14 @@ void SinkWiredReadI2SAndSpdifConfiguration(void)
         }
         configManagerReleaseConfig(I2S_DATA_CONFIG_BLK_ID);
     }
-
+/*-------------------------------------------------------------------------------------------*/
+#ifndef I2S_CHANNEL_ENABLE
+    GWIRED.i2s_config_data->i2s_init_config.master_operation = 0;
+    GWIRED.i2s_config_data->i2s_init_config.bits_per_sample = 24;
+    GWIRED.i2s_config_data->i2s_init_config.bit_clock_scaling_factor = 64;// 2*48K*16 = 1.536M clk
+    GWIRED.i2s_config_data->i2s_init_config.music_resampling_frequency = 48000;
+#endif
+/*-------------------------------------------------------------------------------------------*/
     /* Pass data to I2S library for future use */
     AudioI2SInitialise(GWIRED.i2s_config_data);
 }

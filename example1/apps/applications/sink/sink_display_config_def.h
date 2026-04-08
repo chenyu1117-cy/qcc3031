@@ -20,7 +20,7 @@ DESCRIPTION
 
 #include "config_definition.h"
 
-#define SINK_DISPLAY_CONFIG_BLK_ID 1176
+#define SINK_DISPLAY_CONFIG_BLK_ID 1279
 
 typedef struct {
     unsigned short disp_backlight_pio:8;

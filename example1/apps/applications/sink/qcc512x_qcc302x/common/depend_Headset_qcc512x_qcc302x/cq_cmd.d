@@ -231,5 +231,14 @@ depend_Headset_qcc512x_qcc302x/cq_cmd.o: ..\..\cq_cmd.c \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection_no_ble.h \
     ..\..\sink_linkloss.h \
     ..\..\sink_private_data_config_def.h \
-    ..\..\config_definition.h 
+    ..\..\config_definition.h \
+    ..\..\sink_hfp_data.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio_plugin_if.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\hfp.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\sppc.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\spp_common.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\panic.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection.h 
 

@@ -372,6 +372,7 @@
     <file path="../../main.c"/>
     <file path="../../main.h"/>
     <file path="../../my_ps.c"/>
+    <file path="../../my_ps.h"/>
     <file path="../../my_uart.c"/>
     <file path="../../my_uart.h"/>
     <file path="../../sink_a2dp.c"/>

@@ -168,7 +168,7 @@
             <property name="enable_usb_hid_upgrade" alias="DEFS">ENABLE_USB_HID_UPGRADE</property>
             <property name="enable_voice_assistant" alias="DEFS"></property>
             <property name="enable_watchdog" alias="DEFS">ENABLE_WATCHDOG</property>
-            <property name="enable_wired" alias="DEFS"></property>
+            <property name="enable_wired" alias="DEFS">ENABLE_WIRED</property>
             <property name="gatt_gaia_server" alias="DEFS">GATT_GAIA_SERVER</property>
             <property name="include_a2dp_extra_codecs" alias="DEFS">INCLUDE_A2DP_EXTRA_CODECS</property>
             <property name="include_aptx_acl_sprint" alias="DEFS">INCLUDE_APTX_ACL_SPRINT</property>

@@ -32,7 +32,7 @@ typedef struct {
     unsigned short charge:1;
 } sink_proprietary_charge_current_t;
 
-#define SINK_USB_POWER_PROPRIETARY_READONLY_CONFIG_BLK_ID 1006
+#define SINK_USB_POWER_PROPRIETARY_READONLY_CONFIG_BLK_ID 1109
 
 typedef struct {
     sink_proprietary_charge_current_t proprietary_charge[1];

@@ -236,5 +236,12 @@ depend_Headset_qcc512x_qcc302x/sink_wired.o: ..\..\sink_wired.c \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\power.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\stream.h \
-    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\pio_common.h 
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\pio_common.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio_plugin_music_params.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio_plugin_music_variants.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio_plugin_output_variants.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\sink_wired_config_def.h \
+    ..\..\config_definition.h 
 

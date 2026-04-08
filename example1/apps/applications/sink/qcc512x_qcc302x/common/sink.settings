@@ -5,6 +5,9 @@
         <item name="Default">
             <item name="deploy">device://tc/usb2tc/100/qcc3031</item>
         </item>
+        <item name="Run on Device">
+            <item name="run">device://tc/usb2tc/100/qcc3031</item>
+        </item>
         <item name="breakpoints">
             <item name="number">0</item>
         </item>
@@ -16,4 +19,5 @@
         </item>
     </group>
     <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/Speaker/default"/>
+    <group name="kitres://{bbac163c-41be-4ce7-b236-236f15ff18ca}/Speaker_Broadcast/default"/>
 </settings>

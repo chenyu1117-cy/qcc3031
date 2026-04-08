@@ -20,7 +20,7 @@ DESCRIPTION
 
 #include "config_definition.h"
 
-#define SINK_LOW_POWER_MODE_READONLY_CONFIG_BLK_ID 1166
+#define SINK_LOW_POWER_MODE_READONLY_CONFIG_BLK_ID 1269
 
 typedef struct {
     unsigned short dormant_nfc:3;

@@ -32,7 +32,7 @@ typedef struct {
     ttp_latency_params_t wired_latency;
 } ttp_latency_selector_t;
 
-#define AUDIO_TTP_CONFIG_BLK_ID 1262
+#define AUDIO_TTP_CONFIG_BLK_ID 1365
 
 typedef struct {
     ttp_latency_selector_t ttp_latency_parameters;

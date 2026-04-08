@@ -31,13 +31,13 @@ typedef struct {
     unsigned short clock_rate;
 } audio_clock_pattern_t;
 
-#define SINK_AUDIO_CLOCK_CONFIG_BLK_ID 1181
+#define SINK_AUDIO_CLOCK_CONFIG_BLK_ID 1284
 
 typedef struct {
     unsigned short default_rate;
 } sink_audio_clock_config_def_t;
 
-#define SINK_AUDIO_CLOCK_TABLE_CONFIG_BLK_ID 1186
+#define SINK_AUDIO_CLOCK_TABLE_CONFIG_BLK_ID 1289
 
 typedef struct {
     audio_clock_pattern_t audio_clock_array[1];

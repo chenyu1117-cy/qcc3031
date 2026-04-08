@@ -20,14 +20,14 @@ DESCRIPTION
 
 #include "config_definition.h"
 
-#define SINK_POWER_MANAGER_WRITEABLE_CONFIG_BLK_ID 1030
+#define SINK_POWER_MANAGER_WRITEABLE_CONFIG_BLK_ID 1133
 
 typedef struct {
     unsigned short padding:15;
     unsigned short lbipmenable:1;
 } sink_power_manager_writeable_config_def_t;
 
-#define SINK_GAS_GAUGE_ACTIONS_CONFIG_BLK_ID 1035
+#define SINK_GAS_GAUGE_ACTIONS_CONFIG_BLK_ID 1138
 
 typedef struct {
     unsigned short max_volume_limit;

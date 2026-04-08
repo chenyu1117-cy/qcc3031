@@ -26,7 +26,7 @@ typedef struct {
     unsigned short available_on_processor:8;
 } cap_bundle_table_entry_t;
 
-#define DOWNLOADABLE_DSP_CAPS_CONFIG_BLK_ID 1275
+#define DOWNLOADABLE_DSP_CAPS_CONFIG_BLK_ID 1378
 
 typedef struct {
     cap_bundle_table_entry_t bundle_file_entry[13];

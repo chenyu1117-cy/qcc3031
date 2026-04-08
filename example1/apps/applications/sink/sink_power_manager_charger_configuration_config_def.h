@@ -53,31 +53,31 @@ typedef struct {
     unsigned short vsel_fast_charge:1;
 } voltage_selectors_structure_t;
 
-#define EXTERNAL_CHARGER_CONFIG_BLK_ID 1132
+#define EXTERNAL_CHARGER_CONFIG_BLK_ID 1235
 
 typedef struct {
     external_charger_structure_t ext_charger_struct;
 } external_charger_config_def_t;
 
-#define CHARGER_PROGRESS_CONFIG_BLK_ID 1137
+#define CHARGER_PROGRESS_CONFIG_BLK_ID 1240
 
 typedef struct {
     charger_progress_structure_t chg_progress_struct;
 } charger_progress_config_def_t;
 
-#define CHARGER_CURRENTS_CONFIG_BLK_ID 1143
+#define CHARGER_CURRENTS_CONFIG_BLK_ID 1246
 
 typedef struct {
     charger_mode_currents_structure_t mode_currents;
 } charger_currents_config_def_t;
 
-#define CHARGER_SAFETY_CONFIG_BLK_ID 1148
+#define CHARGER_SAFETY_CONFIG_BLK_ID 1251
 
 typedef struct {
     charger_safety_structure_t chg_safety;
 } charger_safety_config_def_t;
 
-#define VOLTAGE_SELECT_CONFIG_BLK_ID 1155
+#define VOLTAGE_SELECT_CONFIG_BLK_ID 1258
 
 typedef struct {
     voltage_selectors_structure_t voltage_selectors;

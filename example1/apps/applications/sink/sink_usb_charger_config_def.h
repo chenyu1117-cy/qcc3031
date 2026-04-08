@@ -30,7 +30,7 @@ typedef struct {
     unsigned short charger_config:4;
 } sink_charge_current_t;
 
-#define SINK_USB_POWER_READONLY_CONFIG_BLK_ID 980
+#define SINK_USB_POWER_READONLY_CONFIG_BLK_ID 1083
 
 typedef struct {
     sink_charge_current_t charge[11];

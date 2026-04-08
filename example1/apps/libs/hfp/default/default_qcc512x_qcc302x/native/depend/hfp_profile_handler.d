@@ -95,5 +95,17 @@ hfp/default/default_qcc512x_qcc302x/native/hfp_profile_handler.o: hfp\hfp_profil
     hfp\hfp_network_operator_handler.h \
     hfp\hfp_csr_features.h \
     hfp\hfp_private.h \
-    ..\installed_libs\include\profiles\default_qcc512x_qcc302x\print.h 
+    ..\installed_libs\include\profiles\default_qcc512x_qcc302x\print.h \
+    hfp\..\..\applications\sink\my_uart.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\sink_.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\bdaddr_.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\app\vm\vm_if.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\app\stream\stream_if.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\app\bluestack\types.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\source_.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\app\vm\vm_if.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\app\stream\stream_if.h \
+    ..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
 

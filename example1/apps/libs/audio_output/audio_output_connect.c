@@ -101,6 +101,18 @@ bool AudioOutputInit(const audio_output_config_t* const conf)
     /* Store pointer for later access. */
     config = conf;
 
+/*-------------------------------------------------------------------------------------------*/
+#ifndef I2S_CHANNEL_ENABLE
+    config->mapping[0].endpoint.type = audio_output_type_i2s;
+    config->mapping[0].endpoint.instance = audio_output_hardware_instance_0;
+    config->mapping[0].endpoint.channel = audio_output_channel_a;
+
+    config->mapping[1].endpoint.type = audio_output_type_i2s;
+    config->mapping[1].endpoint.instance = audio_output_hardware_instance_0;
+    config->mapping[1].endpoint.channel = audio_output_channel_b;
+#endif
+/*-------------------------------------------------------------------------------------------*/
+
     /* Ensure all source mappings are cleared */
     audioOutputResetSources();
 

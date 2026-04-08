@@ -78,5 +78,19 @@ depend_Headset_qcc512x_qcc302x/my_uart.o: ..\..\my_uart.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
-    ..\..\cq_cmd.h 
+    ..\..\cq_cmd.h \
+    ..\..\sink_events.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection_no_ble.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\bdaddr_.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\library.h \
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\vmtypes.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink_.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\csb_.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\app\message\system_message.h \
+    ..\..\my_ps.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\ps.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\app\ps\ps_if.h 
 

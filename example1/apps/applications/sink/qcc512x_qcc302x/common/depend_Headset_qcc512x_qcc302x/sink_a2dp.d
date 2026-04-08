@@ -355,5 +355,9 @@ depend_Headset_qcc512x_qcc302x/sink_a2dp.o: ..\..\sink_a2dp.c \
     ..\..\sink_a2dp_config_def.h \
     ..\..\config_definition.h \
     ..\..\sink_malloc_debug.h \
-    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\panic.h 
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\panic.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
 

@@ -264,6 +264,10 @@ depend_Headset_qcc512x_qcc302x/sink_slc.o: ..\..\sink_slc.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\sink_states.h \
     ..\..\sink_bredr.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\sink_pbap.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\pbapc.h \
@@ -291,5 +295,6 @@ depend_Headset_qcc512x_qcc302x/sink_slc.o: ..\..\sink_slc.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection.h \
-    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h 
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\cq_cmd.h 
 

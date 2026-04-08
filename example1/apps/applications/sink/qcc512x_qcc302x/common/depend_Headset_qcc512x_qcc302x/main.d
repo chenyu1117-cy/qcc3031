@@ -533,5 +533,6 @@ depend_Headset_qcc512x_qcc302x/main.o: ..\..\main.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\my_ps.h \
-    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\ps.h 
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\ps.h \
+    ..\..\cq_cmd.h 
 

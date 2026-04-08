@@ -233,5 +233,6 @@ depend_Headset_qcc512x_qcc302x/sink_inquiry.o: ..\..\sink_inquiry.c \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\connection_no_ble.h \
+    ..\..\cq_cmd.h \
     ..\..\sink_debug.h 
 

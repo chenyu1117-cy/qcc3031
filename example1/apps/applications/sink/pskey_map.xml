@@ -365,4 +365,24 @@
         Active="True" 
         PsKeyNumber="181" 
         Id="Configure DSP Capability IDs" />
+
+    <ConfigGroup 
+        Active="True" 
+        PsKeyNumber="182" 
+        Id="Sink Wired Volume" />
+
+    <ConfigGroup 
+        Active="True" 
+        PsKeyNumber="183" 
+        Id="Sink Wired Readonly Config Data" />
+
+    <ConfigGroup 
+        Active="True" 
+        PsKeyNumber="184" 
+        Id="Sink Wired SPDIF Config Data" />
+
+    <ConfigGroup 
+        Active="True" 
+        PsKeyNumber="185" 
+        Id="Sink Wired I2S Config Data" />
 </PsKeyMap>

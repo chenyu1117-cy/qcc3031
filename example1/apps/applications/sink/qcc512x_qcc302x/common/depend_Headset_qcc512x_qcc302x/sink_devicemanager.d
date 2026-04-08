@@ -324,5 +324,9 @@ depend_Headset_qcc512x_qcc302x/sink_devicemanager.o: ..\..\sink_devicemanager.c 
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\app\ps\ps_if.h \
     ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
     ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\bdaddr.h \
-    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio.h 
+    ..\..\..\..\installed_libs\include\profiles\default_qcc512x_qcc302x\audio.h \
+    ..\..\my_uart.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\sink.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\source.h \
+    ..\..\..\..\installed_libs\include\firmware_qcc512x_qcc302x\message.h 
 
