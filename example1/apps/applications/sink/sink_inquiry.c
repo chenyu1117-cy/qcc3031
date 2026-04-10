@@ -826,6 +826,9 @@ void inquiryStop(void)
             }
         }
     }
+    uart_data_stream_tx_data((const uint8 *)"SH0\r\n", 5);
+    
+            uart_data_stream_tx_data((const uint8*)"444\r\n", 5);
 }
 
 
@@ -986,8 +989,7 @@ static void inquiryConnect (uint8 index)
         GINQDATA.inquiry.attempting = 0;
 
         /* If complete, connecting or pairing with second AG failed - stop, otherwise - resume inquiry */
-        if (RSSI_CONNECTING ||(GINQDATA.inquiry.state == inquiry_complete) ||
-            (deviceManagerNumConnectedDevs() && sinkInquiryIsInqSessionNormal()))
+        if (RSSI_CONNECTING ||(GINQDATA.inquiry.state == inquiry_complete))
         {
             inquiryStop();
         }

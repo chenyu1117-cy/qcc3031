@@ -295,6 +295,8 @@ void handle_at_command(recv_t *recv)
             first_device_flag = 1;
             inquiryClearPrintedDevices();
             is_inquiry_mode = 0;
+            sinkInquirySetInquiryAction(rssi_pairing);
+            sinkInquirySetInquirySession(inquiry_session_normal);
             inquiryStart(0);
             break;
 
@@ -303,7 +305,14 @@ void handle_at_command(recv_t *recv)
             inquiryStop();
             inquiryClearPrintedDevices();
             uart_data_stream_tx_data((const uint8*)"SH0\r\n", 5);
+            uart_data_stream_tx_data((const uint8*)"111\r\n", 5);
             break;
+
+        case BLINK_PAIR_MODE:      //"CA" 进入配对模式
+        {
+            MessageSend(&theSink.task, EventUsrEnterPairing, 0);
+            break;
+        }
 
         case BLINK_CONNECT_DEVICE:      // "CC[xx:xx:xx:xx:xx:xx]"
         {
@@ -434,7 +443,7 @@ void handle_at_command(recv_t *recv)
         }
 
         case BLINK_INQUIRY_PAIR_RECORD:// "MX"
-            //查询配对记录
+        //查询配对记录
         {
             sink_attributes attributes;
             typed_bdaddr dev_addr;
@@ -669,7 +678,7 @@ void handle_at_command(recv_t *recv)
                 snprintf(buffer, sizeof(buffer), "IV%s\r\n", recv->param);
                 uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
                 // 调用SppConnectRequest建立SPP连接
-                SppConnectRequest(sinkGetMainTask(), &addr, 0, 0);
+                SppConnectRequest(sinkGetMainTask(), &addr, 1, 0);
             }
             else
             {
@@ -677,6 +686,22 @@ void handle_at_command(recv_t *recv)
             }
             break;
         }
+
+        case BLINK_START_PAIR:      //"DB[addr:12]"
+        {
+            bdaddr addr;
+            if (strToBdaddr(recv->param, &addr))
+            {
+                // 配对但不连接
+                ConnectionSmAuthenticate(sinkGetMainTask(), &addr, 30);
+            }
+            else
+            {
+                uart_data_stream_tx_data((const uint8*)"pair failed\r\n", 20);
+            }
+            break;
+        }
+
 
 
             // ... 添加其他命令处理

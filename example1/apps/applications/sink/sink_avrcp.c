@@ -2709,6 +2709,7 @@ static void handleAvrcpTrackChangedInd(const AVRCP_EVENT_TRACK_CHANGED_IND_T *ms
                     if (Index == sinkAvrcpGetActiveConnection())
                         sinkAvrcpRetrieveNowPlayingRequest(msg->track_index_high, msg->track_index_low, FALSE);
                 }     
+                sinkAvrcpRetrievePlayStatus();
 #endif /* ENABLE_AVRCP_NOW_PLAYING */                 
                 
 #ifdef ENABLE_PARTYMODE

@@ -1394,6 +1394,9 @@ static void handleUEMessage  ( Task task, MessageId id, Message message )
             if (lState != deviceTestMode)
             {
                 inquiryStop();
+                uart_data_stream_tx_data((const uint8 *)"SH0\r\n", 5);
+                
+            uart_data_stream_tx_data((const uint8*)"222\r\n", 5);
                 switch (sinkDataGetActionOnParingmodeTimeout())
                 {
                     case PAIRTIMEOUT_POWER_OFF:
@@ -1554,6 +1557,9 @@ static void handleUEMessage  ( Task task, MessageId id, Message message )
         case ( EventSysRssiPairTimeout ):
             MAIN_DEBUG(("HS: RSSI Pair Timeout\n"));
             inquiryTimeout();
+            uart_data_stream_tx_data((const uint8 *)"SH0\r\n", 5);
+            
+            uart_data_stream_tx_data((const uint8*)"333\r\n", 5);
         break;
         case ( EventSysRefreshEncryption ):
             MAIN_DEBUG(("HS: Refresh Encryption\n"));
@@ -4874,7 +4880,8 @@ void app_handler(Task task, MessageId id, Message message)
     else if(SPP_CLIENT_CONNECT_CFM == id)
     {
         SPP_CLIENT_CONNECT_CFM_T *m  = (SPP_CLIENT_CONNECT_CFM_T *) message ;
-        MAIN_DEBUG((" SPP_CLIENT_CONNECT_CFM: %u\n", m->status));
+        MAIN_DEBUG(("SPP_CLIENT_CONNECT_CFM: status=%u, sink=0x%x, payload=%u\n",
+                m->status, (unsigned)m->sink, m->payload_size));
         if(m->status  == spp_connect_success)
         {
             sppSetSinkData(m->sink);
@@ -5232,12 +5239,14 @@ static void handleRemoteNameComplete(const CL_DM_REMOTE_NAME_COMPLETE_T *message
         memcpy(name_buf, message->remote_name, len);
         name_buf[len] = '\0';
     }
-    else
+    if (is_inquiry_mode==0)
     {
-        strcpy(name_buf, "?");
+        // 搜索设备模式下，获取名字失败就不发送，直接跳过
+        if (message->status != rnr_success || message->size_remote_name <= 0)
+        {
+            return;
+        }
     }
-
-    // 通过 UART 输出设备信息和名称
     if (is_inquiry_mode==0)
     {
         // 搜索设备：发送 XXSF0...

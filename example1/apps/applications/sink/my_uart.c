@@ -11,6 +11,11 @@
 #include "cq_cmd.h"  // 包含AT命令头文件
 #include "sink_events.h"
 #include "my_ps.h"
+#include "connection_no_ble.h"
+#include "sink_slc.h"
+#include "sink_devicemanager.h"
+#include <bdaddr.h>
+#include "sink_scan.h"
 
 #ifdef DEBUG_UART
 #define UART_DEBUG(x)               DEBUG(x)
@@ -202,6 +207,36 @@ void uart_data_stream_rx_data(Source src)
                         uart_data_stream_tx_data((const uint8*)"\r\n", 2);
 
                         uart_data_stream_tx_data((const uint8*)"DB00025B00FF01\r\n", 18);
+                                                // 检查配对列表，如果有设备则执行自动重连
+                        uint16 pdl_size = ConnectionTrustedDeviceListSize();
+                        if(pdl_size > 0)
+                        {
+                            typed_bdaddr  ag_addr;
+                            sink_attributes attributes;      
+                            
+                            // 获取第一个配对设备
+                            if(deviceManagerGetIndexedAttributes(0, &attributes, &ag_addr))
+                            {
+                                sinkEnableDiscoverable(); 
+                                sinkEnableConnectable(); 
+                                
+                                // 上报 IV 状态 - 连接中
+                                char buffer[32];
+                                snprintf(buffer, sizeof(buffer), "IV%02X%02X%02X%02X%02X%02X\r\n", 
+                                        (ag_addr.addr.nap >> 8) & 0xFF, 
+                                        ag_addr.addr.nap & 0xFF, 
+                                        ag_addr.addr.uap, 
+                                        (ag_addr.addr.lap >> 16) & 0xFF, 
+                                        (ag_addr.addr.lap >> 8) & 0xFF, 
+                                        ag_addr.addr.lap & 0xFF); 
+                                uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+                                
+                                uart_data_stream_tx_data((const uint8*)"P1\r\n", 6); 
+                                
+                                // 连接设备
+                                slcConnectDevice(&ag_addr.addr, sink_hfp | sink_a2dp | sink_avrcp);
+                            }
+                        }
                     }
 
                     uart_data_stream_tx_data((const uint8*)"AT+ACK\r\n", 9);
