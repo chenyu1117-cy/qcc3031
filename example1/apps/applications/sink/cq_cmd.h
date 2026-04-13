@@ -1,6 +1,9 @@
 #ifndef _CQ_CMD_H
 #define _CQ_CMD_H
 
+#include <sppc.h>
+#include "sink_spp_qualification.h"
+
 extern int is_inquiry_mode;
 extern uint16 g_current_pair_index;
 extern uint16 g_total_pair_count;
@@ -248,11 +251,23 @@ typedef struct {
     char param[256];     // 参数字符串
 } recv_t;
 
+#define MAX_UUID_LEN 64
+typedef struct {
+    uint8 index;
+    bdaddr addr;
+    char uuid[MAX_UUID_LEN];
+    Sink spp_sink; 
+} spp_uuid_record_t;
+
+#define MAX_SPP_RECORDS 4
+extern spp_uuid_record_t g_spp_uuid_records[MAX_SPP_RECORDS];
+
 extern char* default_commands[BLINK_CMD_NUM];
 extern char* default_indicates[BLINK_IND_NUM];
 
 void handle_at_command(recv_t *recv);
 bool strToBdaddr(const char *str, bdaddr *addr);
 
+uint16 hex_to_bytes(const char *hex_str, uint16 str_len, uint8 *out_buf, uint16 out_buf_size);
 
 #endif // AT_CMD_ENUM_H

@@ -18,13 +18,19 @@
 #include <bdaddr.h>
 #include "sink_private_data.h"
 #include "sink_hfp_data.h"
-#include <sppc.h>
 
 #define PS_LOCAL_NAME       (201)  // 添加这一行
 int is_inquiry_mode = 1;//0-搜索  1-连接成功  2-配对
 uint8 first_device_flag = 0;
 uint16 g_current_pair_index = 0;
 uint16 g_total_pair_count = 0;
+
+spp_uuid_record_t g_spp_uuid_records[MAX_SPP_RECORDS] = {
+    {3, {0, 0, 0}, "1101", 0},
+    {4, {0, 0, 0}, "00000000DECAFADEDECADEAFDECACAFE", 0},
+    {0, {0, 0, 0}, "", 0}, 
+    {0, {0, 0, 0}, "", 0}   
+};
 
 extern char g_current_call_number[32]; 
 extern char g_waiting_call_number[32];  
@@ -669,16 +675,51 @@ void handle_at_command(recv_t *recv)
             }
             break;
         
-        case BLINK_CONNECT_SPP_ADDRESS:  // "SP[addr:12]"
+        case BLINK_CONNECT_SPP_ADDRESS:  // "SP[addr:12][uuid]"
         {
             bdaddr addr;
-            if (strToBdaddr(recv->param, &addr))
+            const char *param = recv->param;
+            const char *uuid_ptr = NULL;
+            DEBUG(("BLINK_CONNECT_SPP_ADDRESS: param=%s, len=%d\r\n", recv->param, strlen(recv->param)));
+            
+            if (strlen(param) >= 12)
             {
-                char buffer[32];
-                snprintf(buffer, sizeof(buffer), "IV%s\r\n", recv->param);
-                uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
-                // 调用SppConnectRequest建立SPP连接
-                SppConnectRequest(sinkGetMainTask(), &addr, 1, 0);
+                char addr_str[13] = {0};
+                strncpy(addr_str, param, 12);
+                
+                if (strToBdaddr(addr_str, &addr))
+                {
+                    DEBUG(("Address parsed: %02X%02X%02X%02X%02X%02X\r\n", 
+                        addr.nap >> 8, addr.nap & 0xFF, addr.uap,
+                        (addr.lap >> 16) & 0xFF, (addr.lap >> 8) & 0xFF, addr.lap & 0xFF));
+                    DEBUG(("UUID pointer: %s\r\n", uuid_ptr));
+                    uuid_ptr = param + 12;
+                    
+                    int record_index = -1;
+                    for (int i = 0; i < MAX_SPP_RECORDS; i++)
+                    {
+                        if (strcmp(g_spp_uuid_records[i].uuid, uuid_ptr) == 0)
+                        {
+                            record_index = i;
+                            break;
+                        }
+                    }
+                    DEBUG(("record_index=%d\r\n", record_index));
+                    if (record_index != -1)
+                    {
+                        DEBUG(("Saving address to record %d\r\n", record_index));
+                        g_spp_uuid_records[record_index].addr = addr;
+                    }
+                    
+                    char buffer[64];
+                    snprintf(buffer, sizeof(buffer), "IV%s\r\n", addr_str);
+                    uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+                    SppConnectRequest(sinkGetMainTask(), &addr, 1, 0);
+                }
+                else
+                {
+                    uart_data_stream_tx_data((const uint8*)"SPP connect failed\r\n", 20);
+                }
             }
             else
             {
@@ -692,6 +733,9 @@ void handle_at_command(recv_t *recv)
             bdaddr addr;
             if (strToBdaddr(recv->param, &addr))
             {
+                
+                MessageSend(&theSink.task, EventUsrEnterPairing, 0);
+
                 // 配对但不连接
                 ConnectionSmAuthenticate(sinkGetMainTask(), &addr, 30);
             }
@@ -701,6 +745,74 @@ void handle_at_command(recv_t *recv)
             }
             break;
         }
+
+        case BLINK_SPP_SEND_DATA:  // "SG[index:1][data]"
+        {
+            const char *param = recv->param;
+            int param_len = strlen(param);
+            DEBUG(("BLINK_SPP_SEND_DATA: param=%s, len=%d\r\n", param, param_len));
+            
+            if (param_len >= 1)
+            {
+                uint8 target_index = param[0] - '0';  // 目标index值
+                const char *data = &param[1];
+                uint16 data_len = param_len - 1;
+                DEBUG(("target_index=%d\r\n", target_index));
+
+                // 如果长度足够，去掉最后4位（2个字节的hex，即4个字符）
+                if (data_len >= 4)
+                {
+                    data_len -= 4;  // 去掉最后4个字符（校验位）
+                }
+
+                uint8 bin_buf[128] = {0};
+                uint16 bin_len = hex_to_bytes(data, data_len, bin_buf, sizeof(bin_buf));
+                DEBUG(("bin_len=%d\r\n", bin_len));
+                
+                if (bin_len > 0)
+                {
+                    // 遍历查找 index 字段匹配的记录
+                    Sink spp_sink = 0;
+                    for (int i = 0; i < MAX_SPP_RECORDS; i++)
+                    {
+                        DEBUG(("Checking record %d: index=%d, sink=%x\r\n", 
+                            i, g_spp_uuid_records[i].index, g_spp_uuid_records[i].spp_sink));
+                        if (g_spp_uuid_records[i].index == target_index)
+                        {
+                            spp_sink = g_spp_uuid_records[i].spp_sink;
+                            DEBUG(("Found record %d, sink=%x\r\n", i, spp_sink));
+                            break;
+                        }
+                    }
+                    
+                    if (spp_sink != 0)
+                    {
+                        uint16 offset = 0;
+                        uint8 *dest = NULL;
+                        
+                        offset = SinkClaim(spp_sink, bin_len);
+                        DEBUG(("SinkClaim offset=%d\r\n", offset));
+                        if (offset != 0xFFFF)
+                        {
+                            dest = SinkMap(spp_sink);
+                            if (dest != NULL)
+                            {
+                                memcpy(dest + offset, bin_buf, bin_len);
+                                SinkFlush(spp_sink, bin_len);
+                                DEBUG(("Data sent successfully\r\n"));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        DEBUG(("spp_sink is 0!\r\n"));
+                    }
+                }
+            }
+            uart_data_stream_tx_data((const uint8*)"AT+OK\r\n", 8);
+            break;
+        }
+
 
 
 
@@ -741,4 +853,30 @@ bool strToBdaddr(const char *str, bdaddr *addr) {
     addr->uap = b[2];
     addr->lap = (b[3] << 16) | (b[4] << 8) | b[5];
     return TRUE;
+}
+
+
+// 将十六进制字符串转换为字节数组，返回实际转换的字节数
+uint16 hex_to_bytes(const char *hex_str, uint16 str_len, uint8 *out_buf, uint16 out_buf_size)
+{
+    uint16 i, byte_count = 0;
+    for (i = 0; i + 1 < str_len && byte_count < out_buf_size; i += 2)
+    {
+        char high = hex_str[i];
+        char low  = hex_str[i + 1];
+        uint8 val = 0;
+
+        if (high >= '0' && high <= '9') val = (high - '0') << 4;
+        else if (high >= 'A' && high <= 'F') val = (high - 'A' + 10) << 4;
+        else if (high >= 'a' && high <= 'f') val = (high - 'a' + 10) << 4;
+        else break; // 非法字符，停止转换
+
+        if (low >= '0' && low <= '9') val |= (low - '0');
+        else if (low >= 'A' && low <= 'F') val |= (low - 'A' + 10);
+        else if (low >= 'a' && low <= 'f') val |= (low - 'a' + 10);
+        else break;
+
+        out_buf[byte_count++] = val;
+    }
+    return byte_count;
 }

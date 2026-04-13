@@ -212,6 +212,16 @@ DESCRIPTION
 RETURNS
     void
 */
+#define ENABLE_CARPLAY
+
+#ifdef ENABLE_CARPLAY
+static const uint8 carplay_uuids[]   = {EIR_UUID128(0xCAFE, 0xDECA, 0xDEAF, 0xDECA, 0xFADE, 0xDECA, 0x0000, 0x0000)};
+//static const uint8 carplay2_uuids[]  = {EIR_UUID128(0x1FD3, 0x50BF, 0x575D, 0x9727, 0x40A2, 0xCD41, 0x4348, 0xEC88)};
+
+#define SIZE_CARPLAY_UUIDS  (sizeof(carplay_uuids))
+//#define SIZE_CARPLAY2_UUIDS  (sizeof(carplay2_uuids))
+#endif
+
 void sinkWriteEirData( const CL_DM_LOCAL_NAME_COMPLETE_T *message )
 {
     uint16 size_uuids = 0;
@@ -224,8 +234,15 @@ void sinkWriteEirData( const CL_DM_LOCAL_NAME_COMPLETE_T *message )
     size_uuids = SIZE_A2DP_UUIDS + SIZE_AVRCP_UUIDS + SIZE_PBAP_UUIDS + SIZE_HFP_UUIDS + SIZE_HSP_UUIDS;
     
     
-    size = GetDeviceIdEirDataSize() + EIR_BLOCK_SIZE(EIR_DATA_SIZE_FULL(size_uuids) + EIR_DATA_SIZE_FULL(message->size_local_name) + EIR_DATA_SIZE_FULL(sizeof(uint8)));    
-    
+//    size = GetDeviceIdEirDataSize() + EIR_BLOCK_SIZE(EIR_DATA_SIZE_FULL(size_uuids) + EIR_DATA_SIZE_FULL(message->size_local_name) + EIR_DATA_SIZE_FULL(sizeof(uint8)));
+
+#ifdef ENABLE_CARPLAY
+//    size = GetDeviceIdEirDataSize() + EIR_BLOCK_SIZE(EIR_DATA_SIZE_FULL(SIZE_CARPLAY_UUIDS) + EIR_DATA_SIZE_FULL(SIZE_CARPLAY2_UUIDS) + EIR_DATA_SIZE_FULL(size_uuids) + EIR_DATA_SIZE_FULL(message->size_local_name) + EIR_DATA_SIZE_FULL(sizeof(uint8)));
+
+    size = GetDeviceIdEirDataSize() + EIR_BLOCK_SIZE(EIR_DATA_SIZE_FULL(SIZE_CARPLAY_UUIDS) + EIR_DATA_SIZE_FULL(size_uuids) + EIR_DATA_SIZE_FULL(message->size_local_name) + EIR_DATA_SIZE_FULL(sizeof(uint8)));
+#else
+    size = GetDeviceIdEirDataSize() + EIR_BLOCK_SIZE(EIR_DATA_SIZE_FULL(size_uuids) + EIR_DATA_SIZE_FULL(message->size_local_name) + EIR_DATA_SIZE_FULL(sizeof(uint8)));
+#endif
     /* Allocate space for EIR data */
     eir = (uint8 *)mallocPanic(size);
     p = eir;
@@ -274,7 +291,18 @@ void sinkWriteEirData( const CL_DM_LOCAL_NAME_COMPLETE_T *message )
         memmove(p, hsp_uuids, sizeof(hsp_uuids));
         p += sizeof(hsp_uuids);
     }
-    
+
+#ifdef ENABLE_CARPLAY
+    /* UUID128 field */
+//    *p++ = EIR_DATA_SIZE(SIZE_CARPLAY_UUIDS+SIZE_CARPLAY2_UUIDS);
+    *p++ = EIR_DATA_SIZE(SIZE_CARPLAY_UUIDS);
+    *p++ = EIR_TYPE_UUID128_PARTIAL;
+
+    memmove(p, carplay_uuids, sizeof(carplay_uuids));
+    p += sizeof(carplay_uuids);
+//    memmove(p, carplay2_uuids, sizeof(carplay2_uuids));
+//    p += sizeof(carplay2_uuids);
+#endif
     
     /* Device Name Field */
     *p++ = EIR_DATA_SIZE(message->size_local_name);  

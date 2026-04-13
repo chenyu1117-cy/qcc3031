@@ -329,7 +329,7 @@ void sinkHandlePinCodeInd(const CL_SM_PIN_CODE_IND_T* ind)
         
 #ifdef HYDRACORE
         /* The PIN is specified here as there is currently no PSKEY_FIXED_PIN equivalent */
-        uint8 packed_pin[16] = "0000";
+        uint8 packed_pin[16] = "1234";
         
         pin_length = 4;
         

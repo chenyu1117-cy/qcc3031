@@ -403,6 +403,8 @@ static void slcConnectionComplete(hfp_link_priority priority, Sink sink, const b
     uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
     is_inquiry_mode = 1;  // 设置为连接模式
     ConnectionReadRemoteName(&theSink.task, bd_addr);
+    uart_data_stream_tx_data((const uint8*)"SEND_AT_CGMI\r\n", 15);
+    HfpAtCmdRequest(priority, "AT+CGMI\r");
 
     /* Another connection made, update number of current connections */
     SLC_DEBUG(("SLC: Pro Connected[%x], NoOfDev=%x\n", (int)sink,deviceManagerNumConnectedDevs())) ;

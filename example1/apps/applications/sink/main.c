@@ -3846,6 +3846,21 @@ static void handleHFPMessage  ( Task task, MessageId id, Message message )
 
     switch(id)
     {
+    case HFP_AT_CMD_CFM:
+    {
+        HFP_AT_CMD_CFM_T *cfm = (HFP_AT_CMD_CFM_T*)message;
+        if(cfm->status == hfp_success)
+        {
+            uart_data_stream_tx_data((const uint8*)"AT_CMD_SEND_OK\r\n", 16);
+            MAIN_DEBUG(("AT_CMD_SEND_OKr\n")) ;
+        }
+        else
+        {
+            uart_data_stream_tx_data((const uint8*)"AT_CMD_SEND_FAIL\r\n", 18);
+             MAIN_DEBUG(("AT_CMD_SEND_FAIL\n")) ;
+        }
+    }
+    break;
         /* -- Handsfree Profile Library Messages -- */
     case HFP_INIT_CFM:
         {
@@ -4877,14 +4892,104 @@ void app_handler(Task task, MessageId id, Message message)
     {
         sinkUpgradeMsgHandler(task, id, message);
     }
-    else if(SPP_CLIENT_CONNECT_CFM == id)
+    else if(SPP_CLIENT_CONNECT_CFM == id) 
     {
-        SPP_CLIENT_CONNECT_CFM_T *m  = (SPP_CLIENT_CONNECT_CFM_T *) message ;
-        MAIN_DEBUG(("SPP_CLIENT_CONNECT_CFM: status=%u, sink=0x%x, payload=%u\n",
-                m->status, (unsigned)m->sink, m->payload_size));
-        if(m->status  == spp_connect_success)
+        DEBUG(("SPP connect success, looking for record...\r\n")); 
+        SPP_CLIENT_CONNECT_CFM_T *m  = (SPP_CLIENT_CONNECT_CFM_T *) message ; 
+        MAIN_DEBUG(("SPP_CLIENT_CONNECT_CFM: status=%u, sink=0x%x, payload=%u\n", 
+                m->status, (unsigned)m->sink, m->payload_size)); 
+        if(m->status  == spp_connect_success) 
+        { 
+            sppSetSinkData(m->sink); 
+            
+            // 遍历所有记录，找到一个 addr 不为空但 spp_sink 为空的记录
+            for (int i = 0; i < MAX_SPP_RECORDS; i++) 
+            { 
+                DEBUG(("Checking record %d: addr.nap=%04X, addr.uap=%02X, addr.lap=%06X, sink=%x\r\n", 
+                    i, 
+                    g_spp_uuid_records[i].addr.nap, 
+                    g_spp_uuid_records[i].addr.uap, 
+                    g_spp_uuid_records[i].addr.lap,
+                    g_spp_uuid_records[i].spp_sink));
+                if((g_spp_uuid_records[i].addr.nap != 0 || 
+                    g_spp_uuid_records[i].addr.uap != 0 || 
+                    g_spp_uuid_records[i].addr.lap != 0) && 
+                g_spp_uuid_records[i].spp_sink == 0) 
+                { 
+                    DEBUG(("Found record %d, saving sink=0x%x\r\n", i, m->sink));
+                    g_spp_uuid_records[i].spp_sink = m->sink;
+                    
+                    char addr_str[13];
+                    sprintf(addr_str, "%02X%02X%02X%02X%02X%02X",
+                            g_spp_uuid_records[i].addr.nap >> 8, g_spp_uuid_records[i].addr.nap & 0xFF,
+                            g_spp_uuid_records[i].addr.uap,
+                            (g_spp_uuid_records[i].addr.lap >> 16) & 0xFF,
+                            (g_spp_uuid_records[i].addr.lap >> 8) & 0xFF,
+                            g_spp_uuid_records[i].addr.lap & 0xFF);
+                    
+                    char buffer[64];
+                    snprintf(buffer, sizeof(buffer), "SV%d%s\r\n", g_spp_uuid_records[i].index, addr_str);
+                    uart_data_stream_tx_data((const uint8*)buffer, strlen(buffer));
+                    break; 
+                } 
+            }
+            DEBUG(("Finished searching records\r\n"));
+        } 
+    }
+    else if(SPP_MESSAGE_MORE_DATA == id)
+    {
+        SPP_MESSAGE_MORE_DATA_T *m = (SPP_MESSAGE_MORE_DATA_T *)message;
+        if(m != NULL && m->source != NULL)
         {
-            sppSetSinkData(m->sink);
+            uint16 length;
+            const uint8 *data;
+            
+            // 从 source 获取对应的 sink
+            Sink spp_sink = StreamSinkFromSource(m->source);
+            
+            // 根据 sink 查找 index
+            uint8 spp_index = 0;
+            if (spp_sink != 0)
+            {
+                for(int i = 0; i < MAX_SPP_RECORDS; i++)
+                {
+                    if(g_spp_uuid_records[i].spp_sink == spp_sink)
+                    {
+                        spp_index = g_spp_uuid_records[i].index;
+                        break;
+                    }
+                }
+            }
+            
+            while ((length = SourceBoundary(m->source)) > 0)
+            {
+                data = SourceMap(m->source);
+                if(data != NULL)
+                {
+                    char buffer[256];
+                    uint16 buf_idx = 0;
+                    buffer[buf_idx++] = 'S';
+                    buffer[buf_idx++] = 'I';
+                    buffer[buf_idx++] = '0' + spp_index;
+                    
+                    // 把二进制数据转换成16进制字符串
+                    uint16 max_hex_len = (sizeof(buffer) - 2 - buf_idx) / 2;  // 每个字节转2个字符
+                    uint16 copy_len = (length < max_hex_len) ? length : max_hex_len;
+                    
+                    for (uint16 i = 0; i < copy_len; i++)
+                    {
+                        uint8 byte = data[i];
+                        buffer[buf_idx++] = "0123456789ABCDEF"[(byte >> 4) & 0xF];
+                        buffer[buf_idx++] = "0123456789ABCDEF"[byte & 0xF];
+                    }
+                    
+                    buffer[buf_idx++] = '\r';
+                    buffer[buf_idx++] = '\n';
+                    
+                    uart_data_stream_tx_data((const uint8*)buffer, buf_idx);
+                }
+                SourceDrop(m->source, length);
+            }
         }
     }
     else

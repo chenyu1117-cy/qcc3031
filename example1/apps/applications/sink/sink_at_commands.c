@@ -36,6 +36,10 @@ NOTES
 #include "sink_powermanager.h"
 #include <string.h>
 #include <byte_utils.h>
+#include "sppc.h"
+#include "sink_main_task.h"
+#include "my_uart.h"
+#include "cq_cmd.h"
 
 #ifdef DEBUG_AT_COMMANDS
     #define AT_DEBUG(x) DEBUG(x)
@@ -153,6 +157,15 @@ void sinkHandleUnrecognisedATCmd(HFP_UNRECOGNISED_AT_CMD_IND_T *ind)
     AT_DEBUG(("AT command = %s\n", pData));
 
     sinkAtCommandsCheckAndProcessProductionTestCommands(ind, pData);
+
+    
+    if(strstr(pData, "Apple") != NULL || strstr(pData, "iPhone") != NULL)
+    {
+
+        uart_data_stream_tx_data((const uint8*)"US\r\n", 4);
+        uart_data_stream_tx_data((const uint8*)"UU00000000DECAFADEDECADEAFDECACAFE\r\n", 36);
+        uart_data_stream_tx_data((const uint8*)"UE\r\n", 4);
+    }
 
     /* check if there's any more configured AT commands to check */
     if(!sinkHfpDataHasAtCmdsData())
